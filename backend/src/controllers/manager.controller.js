@@ -1,42 +1,28 @@
-const { query } = require('../config/database');
-const { audit } = require('../services/audit');
-const { format, startOfWeek, endOfWeek, eachDayOfInterval, subWeeks, isWeekend } = require('date-fns');
+﻿const { query } = require('../config/database');
+const { subWeeks } = require('date-fns');
 
 // GET /manager/team-status?date=YYYY-MM-DD
 exports.getDayStatus = async (req, res) => {
   const { date } = req.query;
   const managerId = req.user.id;
-
   try {
-    // Get teams managed by this manager
     const teamsResult = await query(
-      `SELECT t.id, t.name, mt.include_child_teams
-       FROM manager_teams mt
-       JOIN teams t ON t.id = mt.team_id
-       WHERE mt.manager_id = $1`,
+      `SELECT t.id, t.name FROM manager_teams mt JOIN teams t ON t.id = mt.team_id WHERE mt.manager_id = $1`,
       [managerId]
     );
-
     const teamIds = teamsResult.rows.map(t => t.id);
     if (!teamIds.length) return res.json([]);
 
-    // Get all team members
     const membersResult = await query(
       `SELECT DISTINCT u.id, u.first_name, u.last_name, u.email, u.avatar_url, t.id as team_id, t.name as team_name
        FROM user_teams ut
        JOIN users u ON u.id = ut.user_id
        JOIN teams t ON t.id = ut.team_id
-       JOIN user_roles ur ON ur.user_id = u.id
-       JOIN roles r ON r.id = ur.role_id
-       WHERE ut.team_id = ANY($1)
-         AND r.name = 'member'
-         AND u.is_active = true
-         AND u.deleted_at IS NULL
+       WHERE ut.team_id = ANY($1) AND u.is_active = true AND u.deleted_at IS NULL
        ORDER BY t.name, u.last_name`,
       [teamIds]
     );
 
-    // Get entries for that date
     const entriesResult = await query(
       `SELECT de.user_id, de.status, de.submitted_at, de.id as entry_id,
               json_agg(wi.* ORDER BY wi.sort_order) FILTER (WHERE wi.id IS NOT NULL AND wi.deleted_at IS NULL) as work_items
@@ -50,10 +36,8 @@ exports.getDayStatus = async (req, res) => {
     const entriesMap = {};
     entriesResult.rows.forEach(e => { entriesMap[e.user_id] = e; });
 
-    // Check leave periods
     const leaveResult = await query(
-      `SELECT user_id FROM manager_user_settings
-       WHERE leave_start <= $1 AND leave_end >= $1`,
+      `SELECT user_id FROM manager_user_settings WHERE leave_start <= $1 AND leave_end >= $1`,
       [date]
     );
     const onLeave = new Set(leaveResult.rows.map(r => r.user_id));
@@ -73,7 +57,6 @@ exports.getDayStatus = async (req, res) => {
         submittedAt: entry?.submitted_at || null,
         entryId: entry?.entry_id || null,
         workItems: entry?.work_items || [],
-        isEditable: entry?.status === 'submitted',
         isStillEditable: entry?.status === 'submitted' && new Date() - new Date(entry.submitted_at) < 24 * 60 * 60 * 1000,
       };
     });
@@ -85,11 +68,9 @@ exports.getDayStatus = async (req, res) => {
   }
 };
 
-// GET /manager/weekly-summary?weekStart=YYYY-MM-DD&teamId=
 exports.getWeeklySummary = async (req, res) => {
   const { weekStart } = req.query;
   const managerId = req.user.id;
-
   try {
     const teamsResult = await query(
       `SELECT t.id FROM manager_teams mt JOIN teams t ON t.id = mt.team_id WHERE mt.manager_id = $1`,
@@ -100,68 +81,53 @@ exports.getWeeklySummary = async (req, res) => {
 
     const membersResult = await query(
       `SELECT DISTINCT u.id, u.first_name, u.last_name, u.avatar_url
-       FROM user_teams ut
-       JOIN users u ON u.id = ut.user_id
-       JOIN user_roles ur ON ur.user_id = u.id
-       JOIN roles r ON r.id = ur.role_id
-       WHERE ut.team_id = ANY($1) AND r.name = 'member' AND u.is_active = true AND u.deleted_at IS NULL`,
+       FROM user_teams ut JOIN users u ON u.id = ut.user_id
+       WHERE ut.team_id = ANY($1) AND u.is_active = true AND u.deleted_at IS NULL`,
       [teamIds]
     );
-
     const memberIds = membersResult.rows.map(m => m.id);
     if (!memberIds.length) return res.json({ users: [], summary: {} });
 
     const entriesResult = await query(
-      `SELECT de.user_id, de.entry_date, de.status,
+      `SELECT de.user_id, de.entry_date::text as entry_date, de.status,
               json_agg(wi.* ORDER BY wi.sort_order) FILTER (WHERE wi.id IS NOT NULL AND wi.deleted_at IS NULL) as work_items
        FROM daily_entries de
        LEFT JOIN work_items wi ON wi.entry_id = de.id AND wi.deleted_at IS NULL
-       WHERE de.user_id = ANY($1)
-         AND de.entry_date >= $2
-         AND de.entry_date < ($2::date + interval '7 days')
-         AND de.deleted_at IS NULL
-       GROUP BY de.id
-       ORDER BY de.entry_date`,
+       WHERE de.user_id = ANY($1) AND de.entry_date >= $2
+         AND de.entry_date < ($2::date + interval '7 days') AND de.deleted_at IS NULL
+       GROUP BY de.id ORDER BY de.entry_date`,
       [memberIds, weekStart]
     );
 
-    // Aggregate work type stats
     const workTypeStats = {};
+    const submittedByUser = {};
     entriesResult.rows.forEach(e => {
       if (!workTypeStats[e.user_id]) workTypeStats[e.user_id] = {};
       (e.work_items || []).forEach(wi => {
         const wt = wi.work_type || 'other';
         workTypeStats[e.user_id][wt] = (workTypeStats[e.user_id][wt] || 0) + (wi.time_minutes || 0);
       });
+      if (e.status === 'submitted') submittedByUser[e.user_id] = (submittedByUser[e.user_id] || 0) + 1;
     });
 
-    // Count submitted days per user
-    const submittedByUser = {};
-    entriesResult.rows.forEach(e => {
-      if (e.status === 'submitted') {
-        submittedByUser[e.user_id] = (submittedByUser[e.user_id] || 0) + 1;
-      }
+    res.json({
+      users: membersResult.rows.map(m => ({
+        ...m,
+        submittedDays: submittedByUser[m.id] || 0,
+        workTypeStats: workTypeStats[m.id] || {},
+        entries: entriesResult.rows.filter(e => e.user_id === m.id),
+      })),
+      weekStart,
     });
-
-    const users = membersResult.rows.map(m => ({
-      ...m,
-      submittedDays: submittedByUser[m.id] || 0,
-      workTypeStats: workTypeStats[m.id] || {},
-      entries: entriesResult.rows.filter(e => e.user_id === m.id),
-    }));
-
-    res.json({ users, weekStart });
   } catch (err) {
     console.error('Weekly summary error:', err);
     res.status(500).json({ error: 'Failed to fetch weekly summary' });
   }
 };
 
-// GET /manager/charts?teamId=&from=&to=
 exports.getChartData = async (req, res) => {
   const { from, to } = req.query;
   const managerId = req.user.id;
-
   try {
     const teamsResult = await query(
       `SELECT t.id FROM manager_teams mt JOIN teams t ON t.id = mt.team_id WHERE mt.manager_id = $1`,
@@ -170,52 +136,41 @@ exports.getChartData = async (req, res) => {
     const teamIds = teamsResult.rows.map(t => t.id);
     if (!teamIds.length) return res.json({});
 
-    const memberIds = await query(
+    const memberResult = await query(
       `SELECT DISTINCT u.id FROM user_teams ut JOIN users u ON u.id = ut.user_id
-       JOIN user_roles ur ON ur.user_id = u.id JOIN roles r ON r.id = ur.role_id
-       WHERE ut.team_id = ANY($1) AND r.name = 'member' AND u.is_active = true`,
+       WHERE ut.team_id = ANY($1) AND u.is_active = true AND u.deleted_at IS NULL`,
       [teamIds]
-    ).then(r => r.rows.map(m => m.id));
-
+    );
+    const memberIds = memberResult.rows.map(m => m.id);
     if (!memberIds.length) return res.json({});
 
-    // Work type distribution
-    const workTypeData = await query(
-      `SELECT wi.work_type, SUM(wi.time_minutes) as total_minutes
-       FROM work_items wi
-       JOIN daily_entries de ON de.id = wi.entry_id
-       WHERE de.user_id = ANY($1)
-         AND de.entry_date BETWEEN $2 AND $3
-         AND de.status = 'submitted'
-         AND wi.deleted_at IS NULL
-         AND de.deleted_at IS NULL
-       GROUP BY wi.work_type`,
-      [memberIds, from, to]
-    );
-
-    // Daily submission counts
-    const dailyData = await query(
-      `SELECT entry_date::text, COUNT(*) FILTER (WHERE status = 'submitted') as submitted,
-              COUNT(*) as total
-       FROM daily_entries
-       WHERE user_id = ANY($1) AND entry_date BETWEEN $2 AND $3 AND deleted_at IS NULL
-       GROUP BY entry_date ORDER BY entry_date`,
-      [memberIds, from, to]
-    );
-
-    // Missed days per user
-    const missedData = await query(
-      `SELECT u.id, u.first_name, u.last_name,
-              COUNT(*) FILTER (WHERE de.status IS NULL OR de.status = 'draft' OR de.deleted_at IS NOT NULL) as missed
-       FROM users u
-       CROSS JOIN (
-         SELECT generate_series($2::date, $3::date, '1 day'::interval)::date as d
-       ) dates
-       LEFT JOIN daily_entries de ON de.user_id = u.id AND de.entry_date = dates.d AND de.deleted_at IS NULL
-       WHERE u.id = ANY($1) AND EXTRACT(DOW FROM dates.d) BETWEEN 1 AND 5
-       GROUP BY u.id, u.first_name, u.last_name`,
-      [memberIds, from, to]
-    );
+    const [workTypeData, dailyData, missedData] = await Promise.all([
+      query(
+        `SELECT wi.work_type, SUM(wi.time_minutes) as total_minutes
+         FROM work_items wi JOIN daily_entries de ON de.id = wi.entry_id
+         WHERE de.user_id = ANY($1) AND de.entry_date BETWEEN $2 AND $3
+           AND de.status = 'submitted' AND wi.deleted_at IS NULL AND de.deleted_at IS NULL
+         GROUP BY wi.work_type`,
+        [memberIds, from, to]
+      ),
+      query(
+        `SELECT entry_date::text, COUNT(*) FILTER (WHERE status = 'submitted') as submitted, COUNT(*) as total
+         FROM daily_entries
+         WHERE user_id = ANY($1) AND entry_date BETWEEN $2 AND $3 AND deleted_at IS NULL
+         GROUP BY entry_date ORDER BY entry_date`,
+        [memberIds, from, to]
+      ),
+      query(
+        `SELECT u.id, u.first_name, u.last_name,
+                COUNT(*) FILTER (WHERE de.status IS NULL OR de.status = 'draft') as missed
+         FROM users u
+         CROSS JOIN (SELECT generate_series($2::date, $3::date, '1 day'::interval)::date as d) dates
+         LEFT JOIN daily_entries de ON de.user_id = u.id AND de.entry_date = dates.d AND de.deleted_at IS NULL
+         WHERE u.id = ANY($1) AND EXTRACT(DOW FROM dates.d) BETWEEN 1 AND 5
+         GROUP BY u.id, u.first_name, u.last_name`,
+        [memberIds, from, to]
+      ),
+    ]);
 
     res.json({
       workTypeDistribution: workTypeData.rows,
@@ -228,14 +183,11 @@ exports.getChartData = async (req, res) => {
   }
 };
 
-// GET /manager/teams
 exports.getMyTeams = async (req, res) => {
   try {
     const result = await query(
-      `SELECT t.*, mt.include_child_teams,
-              COUNT(ut.user_id) as member_count
-       FROM manager_teams mt
-       JOIN teams t ON t.id = mt.team_id
+      `SELECT t.*, mt.include_child_teams, COUNT(ut.user_id) as member_count
+       FROM manager_teams mt JOIN teams t ON t.id = mt.team_id
        LEFT JOIN user_teams ut ON ut.team_id = t.id
        WHERE mt.manager_id = $1
        GROUP BY t.id, mt.include_child_teams`,
