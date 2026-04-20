@@ -327,7 +327,7 @@ function WorkItemRow({ item, index, totalMinutes, readOnly, onUpdate, onRemove, 
       className={
 'bg-[var(--pulse-surface)] border rounded-xl overflow-hidden transition-all ' + (isDragOver ? 'border-[var(--pulse-accent)] scale-[1.01]' : 'border-[var(--pulse-border)]')
 }
-      style={{ borderLeftColor: item.colour, borderLeftWidth: 3 }}
+
       draggable={!readOnly}
       onDragStart={onDragStart}
       onDragEnter={() => { onDragEnter(); setIsDragOver(true); }}
@@ -337,16 +337,18 @@ function WorkItemRow({ item, index, totalMinutes, readOnly, onUpdate, onRemove, 
       onDragEnd={onDragEnd}
     >
       <div className="px-3 py-2.5 flex gap-2.5 items-center">
-        {/* Drag handle + colour dot */}
+        {/* Drag handle */}
         <div className="flex flex-row items-center gap-1.5 shrink-0">
           {!readOnly && (
             <svg className="w-3.5 h-3.5 text-[var(--pulse-border)] cursor-grab active:cursor-grabbing" fill="currentColor" viewBox="0 0 20 20">
               <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"/>
             </svg>
           )}
-          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: item.colour }} />
+
         </div>
 
+        {/* Colour bar */}
+        <div className="w-1 self-stretch rounded-full shrink-0" style={{ background: item.colour }} />
         {/* Text box */}
         <div className="flex-1 min-w-0">
           {readOnly ? (
