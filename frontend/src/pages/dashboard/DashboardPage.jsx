@@ -6,7 +6,7 @@ import { Button, Card } from '../../components/ui';
 export default function DashboardPage() {
   const { user, isManager } = useAuth();
   const navigate = useNavigate();
-  const today = new Date().toISOString().split('T')[0];
+  const d = new Date(); const today = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   const dayName = format(new Date(), 'EEEE');
   const dateLabel = format(new Date(), 'MMMM d, yyyy');
 

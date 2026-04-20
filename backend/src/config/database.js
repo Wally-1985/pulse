@@ -1,8 +1,5 @@
-﻿const { Pool } = require('pg');
+const { Pool } = require('pg');
 require('dotenv').config();
-
-// Force Node.js to use UTC for all date handling
-process.env.TZ = 'UTC';
 
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
@@ -13,11 +10,6 @@ const pool = new Pool({
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
-});
-
-// Set timezone to UTC for every new connection
-pool.on('connect', (client) => {
-  client.query("SET timezone = 'UTC'");
 });
 
 pool.on('error', (err) => {

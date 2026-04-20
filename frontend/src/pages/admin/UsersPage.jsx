@@ -14,10 +14,13 @@ export default function UsersPage() {
   const [editUser, setEditUser] = useState(null);
 
   const load = async () => {
-    const [u, t] = await Promise.all([usersApi.getUsers(), teamsApi.getTeams()]);
-    setUsers(u.data);
-    setTeams(t.data);
-    setLoading(false);
+    setLoading(true);
+    try {
+      const [u, t] = await Promise.all([usersApi.getUsers(), teamsApi.getTeams()]);
+      setUsers(u.data);
+      setTeams(t.data);
+    } catch { toast.error('Failed to load users'); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []);
@@ -27,12 +30,12 @@ export default function UsersPage() {
   );
 
   const handleDelete = async (id, name) => {
-    if (!confirm(`Delete ${name}? This will deactivate their account.`)) return;
+    if (!confirm(`Deactivate ${name}? They will no longer be able to log in.`)) return;
     try {
       await usersApi.deleteUser(id);
-      setUsers(u => u.filter(x => x.id !== id));
-      toast.success('User deleted');
-    } catch { toast.error('Failed to delete'); }
+      toast.success('User deactivated');
+      load();
+    } catch (err) { toast.error(err.response?.data?.error || 'Failed to delete'); }
   };
 
   const handleUnlock = async (id) => {
@@ -51,12 +54,7 @@ export default function UsersPage() {
       </div>
 
       <div className="mb-4">
-        <Input
-          placeholder="Search users..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="max-w-xs"
-        />
+        <Input placeholder="Search users..." value={search} onChange={e => setSearch(e.target.value)} className="max-w-xs" />
       </div>
 
       {loading ? (
@@ -76,8 +74,13 @@ export default function UsersPage() {
                     {user.locked_until && new Date(user.locked_until) > new Date() && <Badge variant="warning">Locked</Badge>}
                   </div>
                   <p className="text-xs text-[var(--pulse-muted)]">{user.email}</p>
+                  {(user.teams || []).filter(Boolean).length > 0 && (
+                    <p className="text-xs text-[var(--pulse-muted)] mt-0.5">
+                      Teams: {user.teams.filter(Boolean).join(', ')}
+                    </p>
+                  )}
                 </div>
-                <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                <div className="flex items-center gap-1.5 flex-wrap justify-end shrink-0">
                   {(user.roles || []).map(r => (
                     <Badge key={r} variant={r === 'admin' ? 'danger' : r === 'manager' ? 'accent' : 'default'}>{r}</Badge>
                   ))}
@@ -95,23 +98,16 @@ export default function UsersPage() {
         </Card>
       )}
 
-      <UserModal
-        open={showCreate}
-        onClose={() => setShowCreate(false)}
-        teams={teams}
+      <UserModal open={showCreate} onClose={() => setShowCreate(false)} teams={teams}
         onSave={async (data) => {
           await usersApi.createUser(data);
-          toast.success('User created — welcome email sent');
+          toast.success('User created');
           setShowCreate(false);
           load();
         }}
       />
 
-      <UserModal
-        open={!!editUser}
-        user={editUser}
-        onClose={() => setEditUser(null)}
-        teams={teams}
+      <UserModal open={!!editUser} user={editUser} onClose={() => setEditUser(null)} teams={teams}
         onSave={async (data) => {
           await usersApi.updateUser(editUser.id, data);
           toast.success('User updated');
@@ -125,15 +121,7 @@ export default function UsersPage() {
 
 function UserModal({ open, onClose, user, teams, onSave }) {
   const isEdit = !!user;
-  const [form, setForm] = useState({
-    email: '',
-    firstName: '',
-    lastName: '',
-    roles: ['member'],
-    teamIds: [],
-    isActive: true,
-    sendWelcomeEmail: true,
-  });
+  const [form, setForm] = useState({ email: '', firstName: '', lastName: '', roles: ['member'], teamIds: [], teamRoles: {}, isActive: true, sendWelcomeEmail: true });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -144,29 +132,37 @@ function UserModal({ open, onClose, user, teams, onSave }) {
         lastName: user.last_name,
         roles: user.roles || ['member'],
         teamIds: user.team_ids || [],
+        teamRoles: {},
         isActive: user.is_active,
         sendWelcomeEmail: false,
       });
     } else {
-      setForm({ email: '', firstName: '', lastName: '', roles: ['member'], teamIds: [], isActive: true, sendWelcomeEmail: true });
+      setForm({ email: '', firstName: '', lastName: '', roles: ['member'], teamIds: [], teamRoles: {}, isActive: true, sendWelcomeEmail: true });
     }
   }, [user, open]);
 
   const toggleRole = (role) => {
-    setForm(f => ({
-      ...f,
-      roles: f.roles.includes(role) ? f.roles.filter(r => r !== role) : [...f.roles, role],
-    }));
+    setForm(f => ({ ...f, roles: f.roles.includes(role) ? f.roles.filter(r => r !== role) : [...f.roles, role] }));
   };
 
   const toggleTeam = (id) => {
-    setForm(f => ({
-      ...f,
-      teamIds: f.teamIds.includes(id) ? f.teamIds.filter(x => x !== id) : [...f.teamIds, id],
-    }));
+    setForm(f => {
+      const inTeam = f.teamIds.includes(id);
+      const newTeamIds = inTeam ? f.teamIds.filter(x => x !== id) : [...f.teamIds, id];
+      const newTeamRoles = { ...f.teamRoles };
+      if (inTeam) delete newTeamRoles[id];
+      else newTeamRoles[id] = 'member';
+      return { ...f, teamIds: newTeamIds, teamRoles: newTeamRoles };
+    });
+  };
+
+  const setTeamRole = (teamId, role) => {
+    setForm(f => ({ ...f, teamRoles: { ...f.teamRoles, [teamId]: role } }));
   };
 
   const handleSave = async () => {
+    if (!form.firstName || !form.lastName) { toast.error('First and last name required'); return; }
+    if (!isEdit && !form.email) { toast.error('Email required'); return; }
     setSaving(true);
     try { await onSave(form); }
     catch (err) { toast.error(err.response?.data?.error || 'Failed to save'); }
@@ -177,78 +173,68 @@ function UserModal({ open, onClose, user, teams, onSave }) {
     <Modal open={open} onClose={onClose} title={isEdit ? 'Edit User' : 'Create User'} size="md">
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3">
-          <Input label="First Name" value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} required />
-          <Input label="Last Name" value={form.lastName} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} required />
+          <Input label="First Name" value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} />
+          <Input label="Last Name" value={form.lastName} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} />
         </div>
 
         {!isEdit && (
-          <Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required />
+          <Input label="Email" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
         )}
 
-        {/* Roles */}
+        {/* Global Roles */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium">Roles</label>
+          <label className="text-sm font-medium">Global Roles</label>
+          <p className="text-xs text-[var(--pulse-muted)]">Admin gives system access. Per-team manager role is set below.</p>
           <div className="flex gap-2">
             {ROLES.map(role => (
-              <button
-                key={role}
-                type="button"
-                onClick={() => toggleRole(role)}
+              <button key={role} type="button" onClick={() => toggleRole(role)}
                 className={`px-3 py-1.5 text-sm rounded-lg border transition-all capitalize
-                  ${form.roles.includes(role)
-                    ? 'bg-[var(--pulse-accent)] border-[var(--pulse-accent)] text-white'
-                    : 'border-[var(--pulse-border)] text-[var(--pulse-muted)] hover:border-[var(--pulse-accent)]/50'
-                  }`}
-              >
+                  ${form.roles.includes(role) ? 'bg-[var(--pulse-accent)] border-[var(--pulse-accent)] text-white' : 'border-[var(--pulse-border)] text-[var(--pulse-muted)] hover:border-[var(--pulse-accent)]/50'}`}>
                 {role}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Teams */}
+        {/* Teams with per-team role */}
         {teams.length > 0 && (
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">Teams</label>
-            <div className="flex flex-wrap gap-2 p-3 bg-[var(--pulse-surface-2)] rounded-lg border border-[var(--pulse-border)] max-h-32 overflow-y-auto">
-              {teams.map(team => (
-                <button
-                  key={team.id}
-                  type="button"
-                  onClick={() => toggleTeam(team.id)}
-                  className={`px-2.5 py-1 text-xs rounded-lg border transition-all
-                    ${form.teamIds.includes(team.id)
-                      ? 'bg-[var(--pulse-accent)] border-[var(--pulse-accent)] text-white'
-                      : 'border-[var(--pulse-border)] text-[var(--pulse-muted)] hover:border-[var(--pulse-accent)]/50'
-                    }`}
-                >
-                  {team.name}
-                </button>
-              ))}
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">Team Assignments</label>
+            <p className="text-xs text-[var(--pulse-muted)]">Select teams and set the role for each — a user can be a manager in one team and a member in another.</p>
+            <div className="flex flex-col gap-2 p-3 bg-[var(--pulse-surface-2)] rounded-lg border border-[var(--pulse-border)] max-h-48 overflow-y-auto">
+              {teams.map(team => {
+                const inTeam = form.teamIds.includes(team.id);
+                return (
+                  <div key={team.id} className="flex items-center gap-3">
+                    <button type="button" onClick={() => toggleTeam(team.id)}
+                      className={`flex-1 text-left px-3 py-1.5 text-sm rounded-lg border transition-all
+                        ${inTeam ? 'bg-[var(--pulse-accent-soft)] border-[var(--pulse-accent)] text-[var(--pulse-accent)]' : 'border-[var(--pulse-border)] text-[var(--pulse-muted)] hover:border-[var(--pulse-accent)]/50'}`}>
+                      {team.name}
+                    </button>
+                    {inTeam && (
+                      <select value={form.teamRoles[team.id] || 'member'} onChange={e => setTeamRole(team.id, e.target.value)}
+                        className="text-xs bg-[var(--pulse-surface)] border border-[var(--pulse-border)] rounded-lg px-2 py-1.5 text-[var(--pulse-text)] shrink-0">
+                        <option value="member">Member</option>
+                        <option value="manager">Manager</option>
+                      </select>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
         {isEdit && (
           <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
-              className="rounded"
-            />
+            <input type="checkbox" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))} className="rounded" />
             <span className="text-sm">Active account</span>
           </label>
         )}
 
         {!isEdit && (
           <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.sendWelcomeEmail}
-              onChange={e => setForm(f => ({ ...f, sendWelcomeEmail: e.target.checked }))}
-              className="rounded"
-            />
+            <input type="checkbox" checked={form.sendWelcomeEmail} onChange={e => setForm(f => ({ ...f, sendWelcomeEmail: e.target.checked }))} className="rounded" />
             <span className="text-sm text-[var(--pulse-muted)]">Send welcome email with temp password</span>
           </label>
         )}

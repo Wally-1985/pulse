@@ -1,4 +1,4 @@
-﻿const { query, getClient } = require('../config/database');
+const { query, getClient } = require('../config/database');
 const { audit } = require('../services/audit');
 const { v4: uuidv4 } = require('uuid');
 
@@ -30,7 +30,7 @@ exports.getEntry = async (req, res) => {
 
   try {
     const entryResult = await query(
-      `SELECT id, user_id, entry_date::text as entry_date, status, submitted_at, created_at, updated_at FROM daily_entries WHERE user_id = $1 AND entry_date = $2 AND deleted_at IS NULL`,
+      `SELECT * FROM daily_entries WHERE user_id = $1 AND entry_date = $2 AND deleted_at IS NULL`,
       [userId, date]
     );
 
@@ -84,7 +84,7 @@ exports.upsertEntry = async (req, res) => {
 
     // Get or create entry
     let entryResult = await client.query(
-      `SELECT id, user_id, entry_date::text as entry_date, status, submitted_at, created_at, updated_at FROM daily_entries WHERE user_id = $1 AND entry_date = $2 AND deleted_at IS NULL`,
+      `SELECT * FROM daily_entries WHERE user_id = $1 AND entry_date = $2 AND deleted_at IS NULL`,
       [userId, date]
     );
 
@@ -194,7 +194,7 @@ exports.submitEntry = async (req, res) => {
     const entry = entryResult.rows[0];
 
     // Can't submit future dates
-    const today = new Date().toISOString().split('T')[0];
+    const todayD = new Date(); const today = todayD.getUTCFullYear() + '-' + String(todayD.getUTCMonth()+1).padStart(2,'0') + '-' + String(todayD.getUTCDate()).padStart(2,'0');
     if (entry.entry_date > today) {
       return res.status(400).json({ error: 'Cannot submit a future-dated entry' });
     }

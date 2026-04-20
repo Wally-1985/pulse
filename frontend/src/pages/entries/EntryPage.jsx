@@ -1,5 +1,5 @@
-﻿import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { entriesApi } from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import TimeBar, { formatTime, formatPct } from '../../components/TimeBar';
@@ -45,33 +45,26 @@ const linkify = (text) => {
 
 export default function EntryPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [date, setDate] = useState(searchParams.get('date') || today());
-  const viewUserId = searchParams.get('userId') || null;
   const [entry, setEntry] = useState(null);
   const [workItems, setWorkItems] = useState([]);
   const [totalMinutes, setTotalMinutes] = useState(9 * 60);
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState(''); // 'saving' | 'saved' | ''
   const [submitting, setSubmitting] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const saveTimer = useRef(null);
 
   const isFuture = date > today();
   const isPast = date < today();
-  const isSubmitted = entry?.status === 'submitted';
-  const canEdit = !entry || entry.status === 'draft' || isEditing ||
-    (isSubmitted && entry.canEdit);
-  const canSubmit = !isFuture && canEdit;
+  const canSubmit = entry?.status !== 'submitted' && !isFuture;
+  const canEdit = !entry || entry.status === 'draft' ||
+    (entry.status === 'submitted' && entry.canEdit);
 
   // Load entry for date
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      setEntry(null);
-      setWorkItems([]);
-      setIsEditing(false);
       try {
         const { data } = await entriesApi.getEntry(date, viewUserId);
         setEntry(data);
@@ -90,7 +83,7 @@ export default function EntryPage() {
     };
     load();
     setSearchParams({ date }, { replace: true });
-  }, [date, viewUserId]);
+  }, [date]);
 
   // Auto-save on change
   const autoSave = useCallback((items) => {
@@ -169,7 +162,6 @@ export default function EntryPage() {
       await entriesApi.submitEntry(entry.id);
       setEntry(prev => ({ ...prev, status: 'submitted', submittedAt: new Date().toISOString() }));
       toast.success('Entry submitted!');
-      setTimeout(() => navigate(-1), 800);
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to submit');
     } finally {
@@ -212,16 +204,9 @@ export default function EntryPage() {
           className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-1.5 text-sm text-[var(--pulse-text)] focus:outline-none focus:border-[var(--pulse-accent)]"
         />
         {isFuture && <Badge variant="info">Forward Planning — cannot submit until {date}</Badge>}
-        {isSubmitted && !isEditing && <Badge variant="success">✓ Submitted</Badge>}
-        {isSubmitted && isEditing && <Badge variant="warning">Editing</Badge>}
+        {entry?.status === 'submitted' && <Badge variant="success">✓ Submitted</Badge>}
         {entry?.status === 'draft' && <Badge variant="warning">Draft</Badge>}
         {!entry && !loading && <Badge variant="default">New Entry</Badge>}
-        {isSubmitted && !isEditing && (
-          <Button size="sm" variant="secondary" onClick={() => setIsEditing(true)}>Edit Entry</Button>
-        )}
-        {isSubmitted && isEditing && (
-          <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>Cancel</Button>
-        )}
       </div>
 
       {loading ? (
@@ -288,16 +273,9 @@ export default function EntryPage() {
             </div>
           )}
 
-          {isSubmitted && isEditing && (
-            <div className="flex justify-end">
-              <Button onClick={handleSubmit} loading={submitting} size="lg">
-                Re-submit Entry
-              </Button>
-            </div>
-          )}
-          {isSubmitted && !isEditing && (
-            <div className="text-center py-2">
-              <p className="text-xs text-[var(--pulse-muted)]">Click Edit Entry to make changes</p>
+          {entry?.status === 'submitted' && !canEdit && (
+            <div className="text-center py-4">
+              <p className="text-sm text-[var(--pulse-muted)]">Entry is locked — edit window has passed.</p>
             </div>
           )}
         </>

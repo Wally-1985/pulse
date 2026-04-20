@@ -241,7 +241,11 @@ const migrate = async () => {
         ('smtp_from', ''),
         ('app_name', 'Pulse'),
         ('default_working_hours', '9'),
-        ('data_retention_years', '0')
+        ('data_retention_years', '0'),
+        ('sso_provider', ''),
+        ('sso_client_id', ''),
+        ('sso_discovery_url', ''),
+        ('sso_redirect_uri', '')
       ON CONFLICT (key) DO NOTHING
     `);
 

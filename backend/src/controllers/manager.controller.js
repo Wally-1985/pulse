@@ -1,4 +1,4 @@
-﻿const { query } = require('../config/database');
+const { query } = require('../config/database');
 const { subWeeks } = require('date-fns');
 
 // GET /manager/team-status?date=YYYY-MM-DD
