@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { pool } = require('./database');

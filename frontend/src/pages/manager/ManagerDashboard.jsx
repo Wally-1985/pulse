@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { managerApi } from '../../api';
 import { format, startOfWeek, subWeeks, addDays, eachDayOfInterval } from 'date-fns';
@@ -15,13 +15,18 @@ const WORK_TYPE_COLOURS = {
   other: '#8b5cf6',
 };
 
-const todayStr = () => new Date().toISOString().split('T')[0];
+// Timezone-safe date helpers - always use local date, never toISOString()
+const localDateStr = (d = new Date()) =>
+  d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+
+const todayStr = () => localDateStr(new Date());
+
 const getWeekStart = (date = new Date()) => {
   const d = new Date(date);
   const day = d.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
-  return d.toISOString().split('T')[0];
+  return localDateStr(d);
 };
 
 const weekDays = (weekStart) => {
@@ -29,7 +34,7 @@ const weekDays = (weekStart) => {
   return Array.from({ length: 5 }, (_, i) => {
     const d = new Date(start);
     d.setDate(d.getDate() + i);
-    return d.toISOString().split('T')[0];
+    return localDateStr(d);
   });
 };
 
@@ -74,7 +79,7 @@ export default function ManagerDashboard() {
   };
 
   const loadCharts = async () => {
-    const from = format(subWeeks(new Date(), 4), 'yyyy-MM-dd');
+    const from = localDateStr(subWeeks(new Date(), 4));
     const to = todayStr();
     try {
       const { data } = await managerApi.getChartData(from, to);
