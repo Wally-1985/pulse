@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { NavLink, useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { notificationsApi } from '../../api';
@@ -58,6 +58,16 @@ export default function AppLayout() {
           <div className="w-7 h-7 rounded-lg bg-[var(--pulse-accent)] flex items-center justify-center text-white font-bold text-sm shadow-sm shadow-[var(--pulse-accent)]/40">P</div>
           <span className="font-semibold tracking-tight">Pulse</span>
         </div>
+      </div>
+
+      {/* Log Today button */}
+      <div className="px-3 pt-3 pb-1">
+        <button
+          onClick={() => { navigate('/entry?date=' + new Date().getFullYear() + '-' + String(new Date().getMonth()+1).padStart(2,'0') + '-' + String(new Date().getDate()).padStart(2,'0')); setSidebarOpen(false); }}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[var(--pulse-accent)] hover:bg-[var(--pulse-accent-hover)] text-white text-sm font-medium transition-colors shadow-sm shadow-[var(--pulse-accent)]/30">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+          Log Today
+        </button>
       </div>
 
       {/* Nav */}
