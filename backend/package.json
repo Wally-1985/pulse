@@ -1,10 +1,13 @@
-﻿{
-  "name": "backend",
+{
+  "name": "pulse-backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Pulse Team Performance Tracker - Backend API",
+  "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "db:migrate": "node src/config/migrate.js",
+    "db:seed": "node src/config/seed.js"
   },
   "keywords": [],
   "author": "",
