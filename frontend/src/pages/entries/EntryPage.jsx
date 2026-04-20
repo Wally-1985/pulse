@@ -322,7 +322,7 @@ function WorkItemRow({ item, index, totalMinutes, readOnly, onUpdate, onRemove, 
 
   return (
     <div
-      className={g-[var(--pulse-surface)] border rounded-xl overflow-hidden transition-all \}
+      className={'bg-[var(--pulse-surface)] border rounded-xl overflow-hidden transition-all ' + (isDragOver ? 'border-[var(--pulse-accent)] scale-[1.01]' : 'border-[var(--pulse-border)]')}
       style={{ borderLeftColor: item.colour, borderLeftWidth: 3 }}
       draggable={!readOnly}
       onDragStart={onDragStart}
