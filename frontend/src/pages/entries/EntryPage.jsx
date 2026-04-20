@@ -331,9 +331,9 @@ function WorkItemRow({ item, index, totalMinutes, readOnly, onUpdate, onRemove, 
       onDragOver={(e) => e.preventDefault()}
       onDrop={() => setIsDragOver(false)}
       onDragEnd={onDragEnd}
-    >
+      <div className="px-3 py-2.5 flex gap-2.5 items-center">
       <div className="px-3 py-2.5 flex gap-2.5 items-start">
-        {/* Drag handle + colour dot */}
+        <div className="flex flex-row items-center gap-1.5 shrink-0">
         <div className="flex flex-row items-center gap-1.5 shrink-0 mt-2">
           {!readOnly && (
             <svg className="w-3.5 h-3.5 text-[var(--pulse-border)] cursor-grab active:cursor-grabbing" fill="currentColor" viewBox="0 0 20 20">
