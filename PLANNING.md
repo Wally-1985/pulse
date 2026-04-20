@@ -24,8 +24,8 @@ The backup feature shells out to `pg_dump` and `zip`. These must be installed on
 ### Zendesk integration is per-user
 Unlike SMTP which is system-wide, Zendesk credentials are stored per user in `user_zendesk_settings`. This is because each user authenticates with their own Zendesk account to find tickets they personally commented on. Credentials are stored encrypted-at-rest by PostgreSQL (application layer; consider adding column-level encryption in production).
 
-### Outbound HTTPS requires current OpenSSL
-Node.js uses the system OpenSSL library for outbound HTTPS. On Raspberry Pi OS Lite and older Debian installs, the default OpenSSL and CA certificate bundle may be outdated, causing TLS handshake failures with modern services like Zendesk. The fix is `sudo apt install -y ca-certificates openssl`. Do NOT use `rejectUnauthorized: false` as this disables certificate verification and exposes API tokens to MITM attacks.
+### Outbound HTTPS requires current OpenSSL + axios
+Node.js uses the system OpenSSL library for outbound HTTPS. On Raspberry Pi OS Lite and older Debian installs, the default OpenSSL and CA certificate bundle may be outdated, causing TLS handshake failures with modern services like Zendesk. The fix is `sudo apt install -y ca-certificates openssl`. The Zendesk controller uses `axios` rather than Node's built-in `https` module because axios handles TLS negotiation more gracefully across different environments. Do NOT use `rejectUnauthorized: false` as this disables certificate verification and exposes API tokens to MITM attacks.
 
 ---
 
@@ -39,6 +39,13 @@ Users are never hard-deleted. `deleted_at` is set instead. All queries must incl
 
 ### Array aggregations
 `array_agg(DISTINCT r.name) FILTER (WHERE r.name IS NOT NULL)` is used to collect roles/teams per user in a single query. Without the `FILTER`, null values appear in the array when there are no joined rows.
+
+### New tables need permissions granted
+After running a migration that creates a new table, `pulse_user` won't have access until you explicitly grant it:
+```bash
+sudo -u postgres psql -d pulse_db -c "GRANT ALL PRIVILEGES ON TABLE <table_name> TO pulse_user;"
+```
+The migration script does not handle this automatically for existing installs.
 
 ---
 
@@ -163,7 +170,7 @@ npm run db:seed
 
 | Issue | Status | Notes |
 |-------|--------|-------|
-| SSL errors on Pi for outbound HTTPS | Fixed | Run `sudo apt install -y ca-certificates openssl` |
+| SSL errors on Pi for outbound HTTPS | Fixed | Run `sudo apt install -y ca-certificates openssl`; controller uses axios |
 | `toISOString()` date shifting | Fixed | All frontend files use `localDate()` helper |
 | `admin.controller.js` missing query import | Fixed | Added `const { query } = require(...)` |
 | `manager.controller.js` filtering to role=member only | Fixed | Removed role filter — shows all team members |
@@ -175,6 +182,7 @@ npm run db:seed
 | SSO settings not showing in Admin | Fixed | Conditional render when auth_method === 'sso' |
 | Backup only dumped DB | Fixed | Now ZIP with DB + source + settings |
 | Per-team roles not supported | Fixed | teamRoles object in users controller |
+| Zendesk built-in https module TLS failure | Fixed | Switched to axios for outbound requests |
 
 ---
 
