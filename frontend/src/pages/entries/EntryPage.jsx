@@ -288,61 +288,57 @@ export default function EntryPage() {
 }
 
 function WorkItemRow({ item, totalMinutes, readOnly, onUpdate, onRemove }) {
-  const [expanded, setExpanded] = useState(!item.detail);
-
   return (
     <div
       className="bg-[var(--pulse-surface)] border border-[var(--pulse-border)] rounded-xl overflow-hidden transition-all"
       style={{ borderLeftColor: item.colour, borderLeftWidth: 3 }}
     >
-      <div className="p-3 flex gap-3 items-start">
-        {/* Colour dot + work type */}
-        <div className="flex flex-col gap-1.5 shrink-0 pt-0.5">
-          <div className="w-2.5 h-2.5 rounded-full mt-1" style={{ background: item.colour }} />
-        </div>
+      <div className="px-3 py-2.5 flex gap-2.5 items-start">
+        {/* Colour dot */}
+        <div className="w-2.5 h-2.5 rounded-full mt-2 shrink-0" style={{ background: item.colour }} />
 
-        {/* Detail */}
+        {/* Text box — takes remaining space */}
         <div className="flex-1 min-w-0">
           {readOnly ? (
-            <p className="text-sm text-[var(--pulse-text)] whitespace-pre-wrap break-words">
+            <p className="text-sm text-[var(--pulse-text)] whitespace-pre-wrap break-words pt-0.5">
               {linkify(item.detail || '')}
             </p>
           ) : (
             <textarea
-              className="w-full bg-transparent text-sm text-[var(--pulse-text)] placeholder:text-[var(--pulse-muted)] resize-none focus:outline-none min-h-[2.5rem]"
+              className="w-full bg-transparent text-sm text-[var(--pulse-text)] placeholder:text-[var(--pulse-muted)] resize-none focus:outline-none leading-snug pt-0.5"
               placeholder="What did you work on?"
               value={item.detail}
               onChange={(e) => onUpdate('detail', e.target.value)}
               rows={2}
             />
           )}
-
-          {/* Work type + time (below detail) */}
-          <div className="flex items-center gap-3 mt-2 flex-wrap">
-            {readOnly ? (
-              <Badge variant="default">{WORK_TYPES.find(t => t.value === item.workType)?.label || item.workType}</Badge>
-            ) : (
-              <select
-                value={item.workType}
-                onChange={(e) => onUpdate('workType', e.target.value)}
-                className="text-xs bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-md px-2 py-1 text-[var(--pulse-muted)] focus:outline-none focus:border-[var(--pulse-accent)] cursor-pointer"
-              >
-                {WORK_TYPES.map(t => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
-            )}
-            <span className="text-xs text-[var(--pulse-muted)] font-mono opacity-70">
-              {formatPct(item.timeMinutes, totalMinutes)} · {formatTime(item.timeMinutes)}
-            </span>
-          </div>
         </div>
 
-        {/* Remove */}
+        {/* Right column: dropdown + time */}
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          {readOnly ? (
+            <Badge variant="default">{WORK_TYPES.find(t => t.value === item.workType)?.label || item.workType}</Badge>
+          ) : (
+            <select
+              value={item.workType}
+              onChange={(e) => onUpdate('workType', e.target.value)}
+              className="text-xs bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-md px-2 py-1 text-[var(--pulse-muted)] focus:outline-none focus:border-[var(--pulse-accent)] cursor-pointer"
+            >
+              {WORK_TYPES.map(t => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+          )}
+          <span className="text-xs text-[var(--pulse-muted)] font-mono opacity-70 pr-0.5">
+            {formatPct(item.timeMinutes, totalMinutes)} · {formatTime(item.timeMinutes)}
+          </span>
+        </div>
+
+        {/* Remove button */}
         {!readOnly && (
           <button
             onClick={onRemove}
-            className="shrink-0 w-6 h-6 flex items-center justify-center rounded text-[var(--pulse-muted)] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+            className="shrink-0 w-6 h-6 flex items-center justify-center rounded text-[var(--pulse-muted)] hover:text-red-400 hover:bg-red-500/10 transition-colors mt-0.5"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
