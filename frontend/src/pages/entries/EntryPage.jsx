@@ -57,6 +57,8 @@ export default function EntryPage() {
   const [submitting, setSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const saveTimer = useRef(null);
+  const dragItem = useRef(null);
+  const dragOverItem = useRef(null);
 
   const isFuture = date > today();
   const isPast = date < today();
@@ -109,6 +111,18 @@ export default function EntryPage() {
     const coloured = assignColours(newItems);
     setWorkItems(coloured);
     autoSave(coloured);
+  };
+
+  const handleDragSort = () => {
+    if (dragItem.current === null || dragOverItem.current === null) return;
+    if (dragItem.current === dragOverItem.current) return;
+    const newItems = [...workItems];
+    const dragged = newItems.splice(dragItem.current, 1)[0];
+    newItems.splice(dragOverItem.current, 0, dragged);
+    dragItem.current = null;
+    dragOverItem.current = null;
+    const rebalanced = rebalance(assignColours(newItems), totalMinutes);
+    updateItems(rebalanced);
   };
 
   const addItem = () => {
@@ -230,10 +244,14 @@ export default function EntryPage() {
               <WorkItemRow
                 key={item.id}
                 item={item}
+                index={idx}
                 totalMinutes={totalMinutes}
                 readOnly={!canEdit}
                 onUpdate={(field, val) => updateItem(item.id, field, val)}
                 onRemove={() => removeItem(item.id)}
+                onDragStart={() => { dragItem.current = idx; }}
+                onDragEnter={() => { dragOverItem.current = idx; }}
+                onDragEnd={handleDragSort}
               />
             ))}
 
@@ -299,15 +317,31 @@ export default function EntryPage() {
   );
 }
 
-function WorkItemRow({ item, totalMinutes, readOnly, onUpdate, onRemove }) {
+function WorkItemRow({ item, index, totalMinutes, readOnly, onUpdate, onRemove, onDragStart, onDragEnter, onDragEnd }) {
+  const [isDragOver, setIsDragOver] = useState(false);
+
   return (
     <div
-      className="bg-[var(--pulse-surface)] border border-[var(--pulse-border)] rounded-xl overflow-hidden transition-all"
+      className={g-[var(--pulse-surface)] border rounded-xl overflow-hidden transition-all \}
       style={{ borderLeftColor: item.colour, borderLeftWidth: 3 }}
+      draggable={!readOnly}
+      onDragStart={onDragStart}
+      onDragEnter={() => { onDragEnter(); setIsDragOver(true); }}
+      onDragLeave={() => setIsDragOver(false)}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={() => setIsDragOver(false)}
+      onDragEnd={onDragEnd}
     >
       <div className="px-3 py-2.5 flex gap-2.5 items-start">
-        {/* Colour dot */}
-        <div className="w-2.5 h-2.5 rounded-full mt-2 shrink-0" style={{ background: item.colour }} />
+        {/* Drag handle + colour dot */}
+        <div className="flex flex-col items-center gap-1 shrink-0 mt-1.5">
+          {!readOnly && (
+            <svg className="w-3.5 h-3.5 text-[var(--pulse-border)] cursor-grab active:cursor-grabbing" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"/>
+            </svg>
+          )}
+          <div className="w-2 h-2 rounded-full" style={{ background: item.colour }} />
+        </div>
 
         {/* Text box — takes remaining space */}
         <div className="flex-1 min-w-0">
