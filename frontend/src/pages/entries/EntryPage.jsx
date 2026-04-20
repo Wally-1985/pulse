@@ -334,13 +334,13 @@ function WorkItemRow({ item, index, totalMinutes, readOnly, onUpdate, onRemove, 
     >
       <div className="px-3 py-2.5 flex gap-2.5 items-start">
         {/* Drag handle + colour dot */}
-        <div className="flex flex-col items-center gap-1 shrink-0 mt-1.5">
+        <div className="flex flex-row items-center gap-1.5 shrink-0 mt-2">
           {!readOnly && (
             <svg className="w-3.5 h-3.5 text-[var(--pulse-border)] cursor-grab active:cursor-grabbing" fill="currentColor" viewBox="0 0 20 20">
               <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"/>
             </svg>
           )}
-          <div className="w-2 h-2 rounded-full" style={{ background: item.colour }} />
+          <div className="w-2.5 h-2.5 rounded-full" style={{ background: item.colour }} />
         </div>
 
         {/* Text box — takes remaining space */}
