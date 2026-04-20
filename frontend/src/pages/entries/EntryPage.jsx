@@ -268,7 +268,7 @@ export default function EntryPage() {
           {workItems.length > 0 && (
             <div className="mb-6 p-4 bg-[var(--pulse-surface)] border border-[var(--pulse-border)] rounded-xl">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium">Time Allocation</span>
+                <span className="text-sm font-medium">Time Allocation — {totalMinutes / 60}h work day</span>
                 <span className={`text-xs font-mono ${totalAllocated !== totalMinutes ? 'text-amber-400' : 'text-[var(--pulse-muted)]'}`}>
                   {formatTime(totalAllocated)} / {formatTime(totalMinutes)}
                 </span>
