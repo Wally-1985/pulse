@@ -1,4 +1,4 @@
-const { query, getClient } = require('../config/database');
+﻿const { query, getClient } = require('../config/database');
 const { audit } = require('../services/audit');
 const { v4: uuidv4 } = require('uuid');
 
@@ -50,7 +50,7 @@ exports.getEntry = async (req, res) => {
     res.json({
       id: entry.id,
       userId: entry.user_id,
-      date: entry.entry_date,
+      date: String(entry.entry_date).split('T')[0],
       status: entry.status,
       submittedAt: entry.submitted_at,
       workingDayMinutes: workingMinutes,
@@ -156,7 +156,7 @@ exports.upsertEntry = async (req, res) => {
 
     res.json({
       id: entry.id,
-      date: entry.entry_date,
+      date: String(entry.entry_date).split('T')[0],
       status: entry.status,
       workingDayMinutes: workingMinutes,
       workItems: assignColours(insertedItems.map(i => ({
