@@ -54,13 +54,15 @@ export default function EntryPage() {
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState(''); // 'saving' | 'saved' | ''
   const [submitting, setSubmitting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const saveTimer = useRef(null);
 
   const isFuture = date > today();
   const isPast = date < today();
-  const canSubmit = entry?.status !== 'submitted' && !isFuture;
-  const canEdit = !entry || entry.status === 'draft' ||
-    (entry.status === 'submitted' && entry.canEdit);
+  const isSubmitted = entry?.status === 'submitted';
+  const canEdit = !entry || entry.status === 'draft' || isEditing ||
+    (isSubmitted && entry.canEdit);
+  const canSubmit = !isFuture && canEdit;
 
   // Load entry for date
   useEffect(() => {
@@ -68,6 +70,7 @@ export default function EntryPage() {
       setLoading(true);
       setEntry(null);
       setWorkItems([]);
+      setIsEditing(false);
       try {
         const { data } = await entriesApi.getEntry(date, viewUserId);
         setEntry(data);
@@ -207,9 +210,16 @@ export default function EntryPage() {
           className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-1.5 text-sm text-[var(--pulse-text)] focus:outline-none focus:border-[var(--pulse-accent)]"
         />
         {isFuture && <Badge variant="info">Forward Planning — cannot submit until {date}</Badge>}
-        {entry?.status === 'submitted' && <Badge variant="success">✓ Submitted</Badge>}
+        {isSubmitted && !isEditing && <Badge variant="success">✓ Submitted</Badge>}
+        {isSubmitted && isEditing && <Badge variant="warning">Editing</Badge>}
         {entry?.status === 'draft' && <Badge variant="warning">Draft</Badge>}
         {!entry && !loading && <Badge variant="default">New Entry</Badge>}
+        {isSubmitted && !isEditing && (
+          <Button size="sm" variant="secondary" onClick={() => setIsEditing(true)}>Edit Entry</Button>
+        )}
+        {isSubmitted && isEditing && (
+          <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>Cancel</Button>
+        )}
       </div>
 
       {loading ? (
@@ -276,9 +286,16 @@ export default function EntryPage() {
             </div>
           )}
 
-          {entry?.status === 'submitted' && !canEdit && (
-            <div className="text-center py-4">
-              <p className="text-sm text-[var(--pulse-muted)]">Entry is locked — edit window has passed.</p>
+          {isSubmitted && isEditing && (
+            <div className="flex justify-end">
+              <Button onClick={handleSubmit} loading={submitting} size="lg">
+                Re-submit Entry
+              </Button>
+            </div>
+          )}
+          {isSubmitted && !isEditing && (
+            <div className="text-center py-2">
+              <p className="text-xs text-[var(--pulse-muted)]">Click Edit Entry to make changes</p>
             </div>
           )}
         </>
