@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { entriesApi } from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import TimeBar, { formatTime, formatPct } from '../../components/TimeBar';
@@ -45,6 +45,7 @@ const linkify = (text) => {
 
 export default function EntryPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [date, setDate] = useState(searchParams.get('date') || today());
   const viewUserId = searchParams.get('userId') || null;
@@ -168,6 +169,7 @@ export default function EntryPage() {
       await entriesApi.submitEntry(entry.id);
       setEntry(prev => ({ ...prev, status: 'submitted', submittedAt: new Date().toISOString() }));
       toast.success('Entry submitted!');
+      setTimeout(() => navigate(-1), 800);
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to submit');
     } finally {
