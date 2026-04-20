@@ -193,132 +193,115 @@ export default function EntryPage() {
   const totalAllocated = workItems.reduce((s, i) => s + i.timeMinutes, 0);
 
   return (
-    <div className="max-w-5xl mx-auto"><div className="flex gap-6 items-start"><div className="flex-1 min-w-0">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
-        <div>
-          <h1 className="text-xl font-semibold">Daily Entry</h1>
-          <p className="text-sm text-[var(--pulse-muted)] mt-0.5">
-            {user?.firstName} {user?.lastName}
-          </p>
+    <div className="max-w-5xl mx-auto flex gap-6 items-start">
+      {/* Left column - entry form */}
+      <div className="flex-1 min-w-0">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold">Daily Entry</h1>
+            <p className="text-sm text-[var(--pulse-muted)] mt-0.5">{user?.firstName} {user?.lastName}</p>
+          </div>
+          <div className="h-5 flex items-center">
+            {saveStatus === 'saving' && (<span className="text-xs text-[var(--pulse-muted)] flex items-center gap-1.5"><Spinner size="sm" /> Saving&hellip;</span>)}
+            {saveStatus === 'saved' && (<span className="text-xs text-[var(--pulse-muted)] opacity-60">Saved</span>)}
+          </div>
         </div>
 
-        {/* Save status */}
-        <div className="h-5 flex items-center">
-          {saveStatus === 'saving' && (
-            <span className="text-xs text-[var(--pulse-muted)] flex items-center gap-1.5">
-              <Spinner size="sm" /> Saving…
-            </span>
-          )}
-          {saveStatus === 'saved' && (
-            <span className="text-xs text-[var(--pulse-muted)] opacity-60">Saved</span>
-          )}
+        {/* Date + status */}
+        <div className="flex items-center gap-3 mb-6 flex-wrap">
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+            className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-1.5 text-sm text-[var(--pulse-text)] focus:outline-none focus:border-[var(--pulse-accent)]" />
+          {isFuture && <Badge variant="info">Forward Planning — cannot submit until {date}</Badge>}
+          {isSubmitted && !isEditing && <Badge variant="success">&#x2713; Submitted</Badge>}
+          {isSubmitted && isEditing && <Badge variant="warning">Editing</Badge>}
+          {entry?.status === 'draft' && <Badge variant="warning">Draft</Badge>}
+          {!entry && !loading && <Badge variant="default">New Entry</Badge>}
+          {isSubmitted && !isEditing && (<Button size="sm" variant="secondary" onClick={() => setIsEditing(true)}>Edit Entry</Button>)}
+          {isSubmitted && isEditing && (<Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>Cancel</Button>)}
         </div>
-      </div>
 
-      {/* Date picker + status */}
-      <div className="flex items-center gap-3 mb-6 flex-wrap">
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-1.5 text-sm text-[var(--pulse-text)] focus:outline-none focus:border-[var(--pulse-accent)]"
-        />
-        {isFuture && <Badge variant="info">Forward Planning — cannot submit until {date}</Badge>}
-        {isSubmitted && !isEditing && <Badge variant="success">✓ Submitted</Badge>}
-        {isSubmitted && isEditing && <Badge variant="warning">Editing</Badge>}
-        {entry?.status === 'draft' && <Badge variant="warning">Draft</Badge>}
-        {!entry && !loading && <Badge variant="default">New Entry</Badge>}
-        {isSubmitted && !isEditing && (
-          <Button size="sm" variant="secondary" onClick={() => setIsEditing(true)}>Edit Entry</Button>
-        )}
-        {isSubmitted && isEditing && (
-          <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>Cancel</Button>
-        )}
-      </div>
+        {loading ? (
+          <div className="flex justify-center py-20"><Spinner size="lg" /></div>
+        ) : (
+          <>
+            {/* Work items */}
+            <div className="flex flex-col gap-3 mb-6">
+              {workItems.map((item, idx) => (
+                <WorkItemRow
+                  key={item.id}
+                  item={item}
+                  index={idx}
+                  totalMinutes={totalMinutes}
+                  readOnly={!canEdit}
+                  onUpdate={(field, val) => updateItem(item.id, field, val)}
+                  onRemove={() => removeItem(item.id)}
+                  onDragStart={() => { dragItem.current = idx; }}
+                  onDragEnter={() => { dragOverItem.current = idx; }}
+                  onDragEnd={handleDragSort}
+                />
+              ))}
+              {workItems.length === 0 && (
+                <div className="border border-dashed border-[var(--pulse-border)] rounded-xl p-8 text-center">
+                  <p className="text-sm text-[var(--pulse-muted)]">No work items yet. Add one below.</p>
+                </div>
+              )}
+            </div>
 
-      {loading ? (
-        <div className="flex justify-center py-20"><Spinner size="lg" /></div>
-      ) : (
-        <>
-          {/* Work items */}
-          <div className="flex flex-col gap-3 mb-6">
-            {workItems.map((item, idx) => (
-              <WorkItemRow
-                key={item.id}
-                item={item}
-                index={idx}
-                totalMinutes={totalMinutes}
-                readOnly={!canEdit}
-                onUpdate={(field, val) => updateItem(item.id, field, val)}
-                onRemove={() => removeItem(item.id)}
-                onDragStart={() => { dragItem.current = idx; }}
-                onDragEnter={() => { dragOverItem.current = idx; }}
-                onDragEnd={handleDragSort}
-              />
-            ))}
-
-            {workItems.length === 0 && (
-              <div className="border border-dashed border-[var(--pulse-border)] rounded-xl p-8 text-center">
-                <p className="text-sm text-[var(--pulse-muted)]">No work items yet. Add one below.</p>
+            {/* Time allocation bar */}
+            {workItems.length > 0 && (
+              <div className="mb-6 p-4 bg-[var(--pulse-surface)] border border-[var(--pulse-border)] rounded-xl">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium">Time Allocation &mdash; {totalMinutes / 60}h work day</span>
+                  <span className={`text-xs font-mono ${totalAllocated !== totalMinutes ? 'text-amber-400' : 'text-[var(--pulse-muted)]'}`}>
+                    {formatTime(totalAllocated)} / {formatTime(totalMinutes)}
+                  </span>
+                </div>
+                <TimeBar items={workItems} totalMinutes={totalMinutes} onChange={handleTimeChange} readOnly={!canEdit} />
+                <p className="text-xs text-[var(--pulse-muted)] mt-2">Drag the handles to adjust time allocation</p>
               </div>
             )}
-          </div>
 
-          {/* Time allocation bar */}
-          {workItems.length > 0 && (
-            <div className="mb-6 p-4 bg-[var(--pulse-surface)] border border-[var(--pulse-border)] rounded-xl">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium">Time Allocation — {totalMinutes / 60}h work day</span>
-                <span className={`text-xs font-mono ${totalAllocated !== totalMinutes ? 'text-amber-400' : 'text-[var(--pulse-muted)]'}`}>
-                  {formatTime(totalAllocated)} / {formatTime(totalMinutes)}
-                </span>
+            {/* Add buttons */}
+            {canEdit && (
+              <div className="flex flex-wrap gap-2 mb-6">
+                <Button variant="secondary" size="sm" onClick={addItem}>+ Add Work Item</Button>
+                <Button variant="secondary" size="sm" onClick={addLunch}>+ Add 1h Lunch</Button>
               </div>
-              <TimeBar
-                items={workItems}
-                totalMinutes={totalMinutes}
-                onChange={handleTimeChange}
-                readOnly={!canEdit}
-              />
-              <p className="text-xs text-[var(--pulse-muted)] mt-2">Drag the handles to adjust time allocation</p>
-            </div>
-          )}
+            )}
 
-          {/* Actions */}
-          {canEdit && (
-            <div className="flex flex-wrap gap-2 mb-6">
-              <Button variant="secondary" size="sm" onClick={addItem}>
-                + Add Work Item
-              </Button>
-              <Button variant="secondary" size="sm" onClick={addLunch}>
-                + Add 1h Lunch
-              </Button>
-            </div>
-          )}
+            {/* Submit */}
+            {canSubmit && !isSubmitted && (
+              <div className="flex justify-end">
+                <Button onClick={handleSubmit} loading={submitting} size="lg">Submit Entry</Button>
+              </div>
+            )}
+            {isSubmitted && isEditing && (
+              <div className="flex justify-end">
+                <Button onClick={handleSubmit} loading={submitting} size="lg">Re-submit Entry</Button>
+              </div>
+            )}
+            {isSubmitted && !isEditing && (
+              <div className="text-center py-2">
+                <p className="text-xs text-[var(--pulse-muted)]">Click Edit Entry to make changes</p>
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
-          {/* Submit */}
-          {canSubmit && !isSubmitted && (
-            <div className="flex justify-end">
-              <Button onClick={handleSubmit} loading={submitting} size="lg">Submit Entry</Button>
-            </div>
-          )}
-
-          {isSubmitted && isEditing && (
-            <div className="flex justify-end">
-              <Button onClick={handleSubmit} loading={submitting} size="lg">Re-submit Entry</Button>
-            </div>
-          )}
-
-          {isSubmitted && !isEditing && (
-            <div className="text-center py-2">
-              <p className="text-xs text-[var(--pulse-muted)]">Click Edit Entry to make changes</p>
-            </div>
-          )}
-        </>
-      )}
+      {/* Right column - Zendesk activity */}
+      <div className="w-72 shrink-0 sticky top-20">
+        <ZendeskActivity onAddWorkItem={canEdit ? (zdItem) => {
+          const newItem = { id: ('temp_' + Date.now()), detail: zdItem.detail, workType: zdItem.workType, timeMinutes: 0, isLocked: false, colour: '' };
+          const updated = rebalance(assignColours([...workItems, newItem]), totalMinutes);
+          updateItems(updated);
+        } : null} />
+      </div>
     </div>
   );
 }
+
 
 function WorkItemRow({ item, index, totalMinutes, readOnly, onUpdate, onRemove, onDragStart, onDragEnter, onDragEnd }) {
   const [isDragOver, setIsDragOver] = useState(false);
