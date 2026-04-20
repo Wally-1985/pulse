@@ -1,0 +1,287 @@
+require('dotenv').config();
+const { pool } = require('./database');
+
+const migrate = async () => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Enable UUID extension
+    await client.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
+
+    // ─── TEAMS ─────────────────────────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS teams (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        name VARCHAR(255) NOT NULL,
+        parent_id UUID REFERENCES teams(id) ON DELETE SET NULL,
+        week_start VARCHAR(10) DEFAULT 'monday',
+        missing_threshold INTEGER DEFAULT 50,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        deleted_at TIMESTAMPTZ
+      )
+    `);
+
+    // ─── USERS ─────────────────────────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255),
+        first_name VARCHAR(100) NOT NULL,
+        last_name VARCHAR(100) NOT NULL,
+        avatar_url VARCHAR(500),
+        timezone VARCHAR(100) DEFAULT 'UTC',
+        is_active BOOLEAN DEFAULT true,
+        auth_method VARCHAR(20) DEFAULT 'password',
+        mfa_enabled BOOLEAN DEFAULT false,
+        mfa_secret VARCHAR(255),
+        mfa_type VARCHAR(20) DEFAULT 'totp',
+        mfa_enforced BOOLEAN DEFAULT false,
+        failed_login_attempts INTEGER DEFAULT 0,
+        locked_until TIMESTAMPTZ,
+        password_reset_token VARCHAR(255),
+        password_reset_expires TIMESTAMPTZ,
+        setup_status VARCHAR(20) DEFAULT 'active',
+        notification_preference VARCHAR(20) DEFAULT 'both',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        deleted_at TIMESTAMPTZ
+      )
+    `);
+
+    // ─── ROLES ─────────────────────────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS roles (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        name VARCHAR(50) UNIQUE NOT NULL,
+        description TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      INSERT INTO roles (name, description) VALUES
+        ('admin', 'System administrator'),
+        ('manager', 'Team manager'),
+        ('member', 'Team member')
+      ON CONFLICT (name) DO NOTHING
+    `);
+
+    // ─── USER ROLES ────────────────────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_roles (
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        role_id UUID REFERENCES roles(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        PRIMARY KEY (user_id, role_id)
+      )
+    `);
+
+    // ─── USER TEAMS ────────────────────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_teams (
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        team_id UUID REFERENCES teams(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        PRIMARY KEY (user_id, team_id)
+      )
+    `);
+
+    // ─── MANAGER TEAM ASSIGNMENTS ──────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS manager_teams (
+        manager_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        team_id UUID REFERENCES teams(id) ON DELETE CASCADE,
+        include_child_teams BOOLEAN DEFAULT false,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        PRIMARY KEY (manager_id, team_id)
+      )
+    `);
+
+    // ─── MANAGER USER SETTINGS ─────────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS manager_user_settings (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        manager_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        working_day_hours NUMERIC(4,2) DEFAULT 9,
+        alerts_enabled BOOLEAN DEFAULT true,
+        missed_day_threshold INTEGER DEFAULT 1,
+        leave_start DATE,
+        leave_end DATE,
+        leave_note TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(manager_id, user_id)
+      )
+    `);
+
+    // ─── DAILY ENTRIES ─────────────────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS daily_entries (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        entry_date DATE NOT NULL,
+        status VARCHAR(20) DEFAULT 'draft',
+        submitted_at TIMESTAMPTZ,
+        deleted_at TIMESTAMPTZ,
+        deleted_by UUID REFERENCES users(id),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(user_id, entry_date)
+      )
+    `);
+
+    // ─── WORK ITEMS ────────────────────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS work_items (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        entry_id UUID REFERENCES daily_entries(id) ON DELETE CASCADE,
+        detail TEXT NOT NULL DEFAULT '',
+        work_type VARCHAR(50) NOT NULL DEFAULT 'project',
+        time_minutes INTEGER NOT NULL DEFAULT 0,
+        is_locked BOOLEAN DEFAULT false,
+        sort_order INTEGER DEFAULT 0,
+        colour VARCHAR(20),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        deleted_at TIMESTAMPTZ
+      )
+    `);
+
+    // ─── SESSIONS ──────────────────────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS sessions (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        token_hash VARCHAR(255) NOT NULL,
+        device_info TEXT,
+        ip_address VARCHAR(45),
+        remember_me BOOLEAN DEFAULT false,
+        expires_at TIMESTAMPTZ NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        last_used_at TIMESTAMPTZ DEFAULT NOW(),
+        revoked_at TIMESTAMPTZ
+      )
+    `);
+
+    // ─── AUDIT LOG ─────────────────────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+        api_key_id UUID,
+        role VARCHAR(50),
+        action_type VARCHAR(100) NOT NULL,
+        entity_type VARCHAR(100),
+        entity_id UUID,
+        old_value JSONB,
+        new_value JSONB,
+        success BOOLEAN DEFAULT true,
+        ip_address VARCHAR(45),
+        user_agent TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
+    // ─── NOTIFICATIONS ─────────────────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        type VARCHAR(50) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        body TEXT,
+        is_read BOOLEAN DEFAULT false,
+        related_entity_type VARCHAR(100),
+        related_entity_id UUID,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        read_at TIMESTAMPTZ
+      )
+    `);
+
+    // ─── PUBLIC HOLIDAYS ───────────────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS public_holidays (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        name VARCHAR(255) NOT NULL,
+        date DATE NOT NULL UNIQUE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
+    // ─── NON WORKING DATES ─────────────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS non_working_dates (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        name VARCHAR(255) NOT NULL,
+        date DATE NOT NULL UNIQUE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
+    // ─── SYSTEM SETTINGS ───────────────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS system_settings (
+        key VARCHAR(100) PRIMARY KEY,
+        value TEXT,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
+    await client.query(`
+      INSERT INTO system_settings (key, value) VALUES
+        ('auth_method', 'password'),
+        ('mfa_policy', 'optional'),
+        ('smtp_host', ''),
+        ('smtp_port', '587'),
+        ('smtp_user', ''),
+        ('smtp_from', ''),
+        ('app_name', 'Pulse'),
+        ('default_working_hours', '9'),
+        ('data_retention_years', '0')
+      ON CONFLICT (key) DO NOTHING
+    `);
+
+    // ─── API KEYS ──────────────────────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS api_keys (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        name VARCHAR(255) NOT NULL,
+        key_hash VARCHAR(255) NOT NULL UNIQUE,
+        key_prefix VARCHAR(20) NOT NULL,
+        permissions JSONB DEFAULT '{"read": true, "write": false}'::jsonb,
+        ip_restrictions TEXT[],
+        created_by UUID REFERENCES users(id),
+        last_used_at TIMESTAMPTZ,
+        expires_at TIMESTAMPTZ,
+        revoked_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
+    // ─── INDEXES ───────────────────────────────────────────────────────────
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_daily_entries_user_date ON daily_entries(user_id, entry_date)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_daily_entries_date ON daily_entries(entry_date)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_work_items_entry ON work_items(entry_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token_hash)`);
+
+    await client.query('COMMIT');
+    console.log('✅ Migration complete');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('❌ Migration failed:', err);
+    throw err;
+  } finally {
+    client.release();
+    await pool.end();
+  }
+};
+
+migrate().catch(() => process.exit(1));

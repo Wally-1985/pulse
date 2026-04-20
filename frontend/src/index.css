@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  --pulse-bg: #0f0f13;
+  --pulse-surface: #17171d;
+  --pulse-surface-2: #1e1e26;
+  --pulse-border: #2a2a35;
+  --pulse-text: #e8e8f0;
+  --pulse-muted: #6b6b80;
+  --pulse-accent: #7c6af7;
+  --pulse-accent-hover: #6b58f0;
+  --pulse-accent-soft: rgba(124, 106, 247, 0.12);
+  --pulse-success: #34d399;
+  --pulse-warning: #fbbf24;
+  --pulse-danger: #f87171;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background-color: var(--pulse-bg);
+  color: var(--pulse-text);
+  -webkit-font-smoothing: antialiased;
+}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--pulse-border); border-radius: 3px; }
+:focus-visible { outline: 2px solid var(--pulse-accent); outline-offset: 2px; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.animate-fade-in { animation: fadeIn 0.2s ease forwards; }
