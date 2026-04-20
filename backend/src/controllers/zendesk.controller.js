@@ -8,8 +8,8 @@ const zendeskRequest = (subdomain, email, token, path) => {
       hostname: subdomain + '.zendesk.com',
       path: '/api/v2' + path,
       method: 'GET',
-      headers: { 'Authorization': 'Basic ' + auth, 'Content-Type': 'application/json' },
-    };
+      minVersion: 'TLSv1.2',
+      headers: { 'Authorization': 'Basic ' + auth, 'Content-Type': 'application/json', 'Accept': 'application/json' },
     const req = https.request(options, (res) => {
       let data = '';
       res.on('data', chunk => { data += chunk; });
