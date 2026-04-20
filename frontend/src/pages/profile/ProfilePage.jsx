@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { usersApi, authApi } from '../../api';
 import { Card, Button, Input, Badge, Modal, Spinner, Avatar } from '../../components/ui';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 const TIMEZONES = [
   'UTC', 'Australia/Brisbane', 'Australia/Sydney', 'Australia/Melbourne',
@@ -11,6 +12,7 @@ const TIMEZONES = [
 ];
 
 export default function ProfilePage() {
+  usePageTitle('Profile');
   const { user, refreshUser } = useAuth();
   const [profile, setProfile] = useState(null);
   const [sessions, setSessions] = useState([]);

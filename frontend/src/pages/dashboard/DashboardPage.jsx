@@ -1,9 +1,11 @@
-import { useNavigate } from 'react-router-dom';
+﻿import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { format } from 'date-fns';
 import { Button, Card } from '../../components/ui';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 export default function DashboardPage() {
+  usePageTitle('Home');
   const { user, isManager } = useAuth();
   const navigate = useNavigate();
   const d = new Date(); const today = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');

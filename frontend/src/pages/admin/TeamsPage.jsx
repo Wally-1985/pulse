@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { teamsApi, usersApi } from '../../api';
 import { Card, Button, Input, Badge, Modal, Spinner, Empty } from '../../components/ui';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 export default function TeamsPage() {
+  usePageTitle('Teams');
   const [teams, setTeams] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);

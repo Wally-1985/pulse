@@ -4,6 +4,7 @@ import { entriesApi } from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import TimeBar, { formatTime, formatPct } from '../../components/TimeBar';
 import { Button, Select, Badge, Spinner } from '../../components/ui';
+import { usePageTitle } from '../../hooks/usePageTitle';
 import toast from 'react-hot-toast';
 
 const WORK_TYPES = [
@@ -44,6 +45,7 @@ const linkify = (text) => {
 };
 
 export default function EntryPage() {
+  usePageTitle('Daily Entry');
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();

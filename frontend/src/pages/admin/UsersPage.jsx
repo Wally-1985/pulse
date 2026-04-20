@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { usersApi, teamsApi } from '../../api';
 import { Card, Button, Input, Badge, Modal, Avatar, Spinner, Empty } from '../../components/ui';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 const ROLES = ['member', 'manager', 'admin'];
 
 export default function UsersPage() {
+  usePageTitle('Users');
   const [users, setUsers] = useState([]);
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);

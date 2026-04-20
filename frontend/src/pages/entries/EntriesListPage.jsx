@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { entriesApi } from '../../api';
 import { format, subWeeks, addWeeks } from 'date-fns';
 import { Card, Badge, Button, Spinner } from '../../components/ui';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 const COLOURS = ['#6366f1','#f59e0b','#10b981','#3b82f6','#ec4899','#8b5cf6','#14b8a6','#f97316'];
 
@@ -22,6 +23,7 @@ const getWeekStart = (date = new Date()) => {
 };
 
 export default function EntriesListPage() {
+  usePageTitle('My Entries');
   const navigate = useNavigate();
   const [weekOffset, setWeekOffset] = useState(0);
   const [entries, setEntries] = useState([]);

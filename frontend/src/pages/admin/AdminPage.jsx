@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { adminApi } from '../../api';
 import { Card, Button, Input, Badge, Spinner, Modal } from '../../components/ui';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 const TABS = [
   { key: 'general', label: 'General' },
@@ -14,6 +15,7 @@ const TABS = [
 ];
 
 export default function AdminPage() {
+  usePageTitle('Admin Settings');
   const [tab, setTab] = useState('general');
   const [settings, setSettings] = useState({});
   const [loading, setLoading] = useState(true);

@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { managerApi } from '../../api';
 import { format, startOfWeek, subWeeks, addDays, eachDayOfInterval } from 'date-fns';
 import { Card, Badge, Avatar, Spinner, Button, Empty } from '../../components/ui';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import toast from 'react-hot-toast';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const WORK_TYPE_COLOURS = {
@@ -35,6 +36,7 @@ const weekDays = (weekStart) => {
 };
 
 export default function ManagerDashboard() {
+  usePageTitle('Team Dashboard');
   const navigate = useNavigate();
   const [activeDay, setActiveDay] = useState(todayStr());
   const [dayMembers, setDayMembers] = useState([]);
