@@ -63,7 +63,7 @@ export default function EntryPage() {
   const isFuture = date > today();
   const isPast = date < today();
   const isSubmitted = entry?.status === 'submitted';
-  const canEdit = !entry || entry.status === 'draft' || isEditing || (isSubmitted && entry.canEdit);
+  const canEdit = !entry || entry.status === 'draft' || (isSubmitted && isEditing);
   const canSubmit = !isFuture && canEdit;
 
   // Load entry for date
