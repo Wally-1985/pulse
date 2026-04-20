@@ -1,4 +1,5 @@
-const { query, pool } = require('../config/database');
+﻿const { query, pool } = require('../config/database');
+const { query } = require('../config/database');
 const { audit } = require('../services/audit');
 const { resetTransporter } = require('../services/email');
 const { v4: uuidv4 } = require('uuid');
