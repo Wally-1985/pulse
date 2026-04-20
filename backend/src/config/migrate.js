@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 const { pool } = require('./database');
 
 const migrate = async () => {
@@ -125,6 +125,7 @@ const migrate = async () => {
         user_id UUID REFERENCES users(id) ON DELETE CASCADE,
         entry_date DATE NOT NULL,
         status VARCHAR(20) DEFAULT 'draft',
+        working_day_minutes INTEGER DEFAULT 540,
         submitted_at TIMESTAMPTZ,
         deleted_at TIMESTAMPTZ,
         deleted_by UUID REFERENCES users(id),
@@ -267,6 +268,9 @@ const migrate = async () => {
     `);
 
     // ─── INDEXES ───────────────────────────────────────────────────────────
+    // Add working_day_minutes to existing tables if not present
+    await client.query(`ALTER TABLE daily_entries ADD COLUMN IF NOT EXISTS working_day_minutes INTEGER DEFAULT 540`);
+
     await client.query(`CREATE INDEX IF NOT EXISTS idx_daily_entries_user_date ON daily_entries(user_id, entry_date)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_daily_entries_date ON daily_entries(entry_date)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_work_items_entry ON work_items(entry_id)`);

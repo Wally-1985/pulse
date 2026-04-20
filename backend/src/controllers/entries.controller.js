@@ -6,11 +6,13 @@ const WORK_TYPES = ['project', 'bau_support', 'maintenance', 'lunch', 'other'];
 const COLOURS = ['#6366f1', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6', '#14b8a6', '#f97316', '#84cc16', '#06b6d4'];
 
 const getWorkingDayMinutes = async (userId) => {
-  const result = await query(
-    `SELECT working_day_hours FROM manager_user_settings WHERE user_id = $1 LIMIT 1`,
-    [userId]
-  );
-  const hours = result.rows[0]?.working_day_hours || 9;
+  // Check manager override first, then system default
+  const [managerResult, systemResult] = await Promise.all([
+    query(`SELECT working_day_hours FROM manager_user_settings WHERE user_id = $1 LIMIT 1`, [userId]),
+    query(`SELECT value FROM system_settings WHERE key = 'default_working_hours'`),
+  ]);
+  const hours = managerResult.rows[0]?.working_day_hours
+    || parseFloat(systemResult.rows[0]?.value || '9');
   return Math.round(hours * 60);
 };
 
@@ -45,7 +47,8 @@ exports.getEntry = async (req, res) => {
       [entry.id]
     );
 
-    const workingMinutes = await getWorkingDayMinutes(userId);
+    // Use stored value for existing entries, current setting for new ones
+    const workingMinutes = entry.working_day_minutes || await getWorkingDayMinutes(userId);
 
     res.json({
       id: entry.id,
@@ -92,9 +95,10 @@ exports.upsertEntry = async (req, res) => {
     const isNew = !entryResult.rows.length;
 
     if (isNew) {
+      const wdm = await getWorkingDayMinutes(userId);
       const insertResult = await client.query(
-        `INSERT INTO daily_entries (user_id, entry_date, status) VALUES ($1, $2, 'draft') RETURNING *`,
-        [userId, date]
+        `INSERT INTO daily_entries (user_id, entry_date, status, working_day_minutes) VALUES ($1, $2, 'draft', $3) RETURNING *`,
+        [userId, date, wdm]
       );
       entry = insertResult.rows[0];
     } else {
@@ -117,7 +121,7 @@ exports.upsertEntry = async (req, res) => {
     );
 
     // Insert new work items
-    const workingMinutes = await getWorkingDayMinutes(userId);
+    const workingMinutes = entry.working_day_minutes || await getWorkingDayMinutes(userId);
     const insertedItems = [];
 
     for (let i = 0; i < (workItems || []).length; i++) {
