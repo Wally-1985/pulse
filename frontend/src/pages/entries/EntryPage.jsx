@@ -324,7 +324,9 @@ function WorkItemRow({ item, index, totalMinutes, readOnly, onUpdate, onRemove, 
 
   return (
     <div
-      className={'bg-[var(--pulse-surface)] border rounded-xl overflow-hidden transition-all ' + (isDragOver ? 'border-[var(--pulse-accent)] scale-[1.01]' : 'border-[var(--pulse-border)]')}
+      className={
+'bg-[var(--pulse-surface)] border rounded-xl overflow-hidden transition-all ' + (isDragOver ? 'border-[var(--pulse-accent)] scale-[1.01]' : 'border-[var(--pulse-border)]')
+}
       style={{ borderLeftColor: item.colour, borderLeftWidth: 3 }}
       draggable={!readOnly}
       onDragStart={onDragStart}
@@ -333,29 +335,28 @@ function WorkItemRow({ item, index, totalMinutes, readOnly, onUpdate, onRemove, 
       onDragOver={(e) => e.preventDefault()}
       onDrop={() => setIsDragOver(false)}
       onDragEnd={onDragEnd}
+    >
       <div className="px-3 py-2.5 flex gap-2.5 items-center">
+        {/* Drag handle + colour dot */}
         <div className="flex flex-row items-center gap-1.5 shrink-0">
-        <div className="flex flex-row items-center gap-1.5 shrink-0 mt-2">
           {!readOnly && (
             <svg className="w-3.5 h-3.5 text-[var(--pulse-border)] cursor-grab active:cursor-grabbing" fill="currentColor" viewBox="0 0 20 20">
               <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"/>
             </svg>
           )}
-          <div className="w-2.5 h-2.5 rounded-full" style={{ background: item.colour }} />
+          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: item.colour }} />
         </div>
 
-        {/* Text box — takes remaining space */}
+        {/* Text box */}
         <div className="flex-1 min-w-0">
           {readOnly ? (
-            <p className="text-sm text-[var(--pulse-text)] whitespace-pre-wrap break-words pt-0.5">
-              {linkify(item.detail || '')}
-            </p>
+            <p className="text-sm text-[var(--pulse-text)] whitespace-pre-wrap break-words">{linkify(item.detail || "")}</p>
           ) : (
             <textarea
-              className="w-full bg-transparent text-sm text-[var(--pulse-text)] placeholder:text-[var(--pulse-muted)] resize-none focus:outline-none leading-snug pt-0.5"
+              className="w-full bg-transparent text-sm text-[var(--pulse-text)] placeholder:text-[var(--pulse-muted)] resize-none focus:outline-none leading-snug"
               placeholder="What did you work on?"
               value={item.detail}
-              onChange={(e) => onUpdate('detail', e.target.value)}
+              onChange={(e) => onUpdate("detail", e.target.value)}
               rows={2}
             />
           )}
@@ -368,7 +369,7 @@ function WorkItemRow({ item, index, totalMinutes, readOnly, onUpdate, onRemove, 
           ) : (
             <select
               value={item.workType}
-              onChange={(e) => onUpdate('workType', e.target.value)}
+              onChange={(e) => onUpdate("workType", e.target.value)}
               className="text-xs bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-md px-2 py-1 text-[var(--pulse-muted)] focus:outline-none focus:border-[var(--pulse-accent)] cursor-pointer"
             >
               {WORK_TYPES.map(t => (
@@ -376,7 +377,7 @@ function WorkItemRow({ item, index, totalMinutes, readOnly, onUpdate, onRemove, 
               ))}
             </select>
           )}
-          <span className="text-xs text-[var(--pulse-muted)] font-mono opacity-70 pr-0.5">
+          <span className="text-xs text-[var(--pulse-muted)] font-mono opacity-70">
             {formatPct(item.timeMinutes, totalMinutes)} · {formatTime(item.timeMinutes)}
           </span>
         </div>
@@ -385,7 +386,7 @@ function WorkItemRow({ item, index, totalMinutes, readOnly, onUpdate, onRemove, 
         {!readOnly && (
           <button
             onClick={onRemove}
-            className="shrink-0 w-6 h-6 flex items-center justify-center rounded text-[var(--pulse-muted)] hover:text-red-400 hover:bg-red-500/10 transition-colors mt-0.5"
+            className="shrink-0 w-6 h-6 flex items-center justify-center rounded text-[var(--pulse-muted)] hover:text-red-400 hover:bg-red-500/10 transition-colors"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
