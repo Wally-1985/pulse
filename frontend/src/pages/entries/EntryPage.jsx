@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { entriesApi } from '../../api';
 import { useAuth } from '../../context/AuthContext';
@@ -18,7 +18,7 @@ const COLOURS = ['#6366f1', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6
 let idCounter = 0;
 const tempId = () => `temp_${++idCounter}`;
 
-const today = () => new Date().toISOString().split('T')[0];
+const today = () => { const d = new Date(); return ${d.getFullYear()}--; };
 
 const rebalance = (items, totalMinutes) => {
   const locked = items.filter(i => i.isLocked);
