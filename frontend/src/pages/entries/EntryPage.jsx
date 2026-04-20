@@ -65,6 +65,8 @@ export default function EntryPage() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
+      setEntry(null);
+      setWorkItems([]);
       try {
         const { data } = await entriesApi.getEntry(date, viewUserId);
         setEntry(data);
@@ -83,7 +85,7 @@ export default function EntryPage() {
     };
     load();
     setSearchParams({ date }, { replace: true });
-  }, [date]);
+  }, [date, viewUserId]);
 
   // Auto-save on change
   const autoSave = useCallback((items) => {
