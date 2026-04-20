@@ -50,7 +50,7 @@ exports.getEntry = async (req, res) => {
     res.json({
       id: entry.id,
       userId: entry.user_id,
-      date: String(entry.entry_date).split('T')[0],
+      date: entry.entry_date instanceof Date ? (entry.entry_date.getFullYear() + '-' + String(entry.entry_date.getUTCMonth()+1).padStart(2,'0') + '-' + String(entry.entry_date.getUTCDate()).padStart(2,'0')) : String(entry.entry_date).substring(0,10),
       status: entry.status,
       submittedAt: entry.submitted_at,
       workingDayMinutes: workingMinutes,
@@ -156,7 +156,7 @@ exports.upsertEntry = async (req, res) => {
 
     res.json({
       id: entry.id,
-      date: String(entry.entry_date).split('T')[0],
+      date: entry.entry_date instanceof Date ? (entry.entry_date.getFullYear() + '-' + String(entry.entry_date.getUTCMonth()+1).padStart(2,'0') + '-' + String(entry.entry_date.getUTCDate()).padStart(2,'0')) : String(entry.entry_date).substring(0,10),
       status: entry.status,
       workingDayMinutes: workingMinutes,
       workItems: assignColours(insertedItems.map(i => ({
