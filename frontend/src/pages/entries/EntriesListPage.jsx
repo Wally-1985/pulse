@@ -110,7 +110,7 @@ export default function EntriesListPage() {
                         </div>
                         {entry.work_items?.length > 0 && (
                           <div className="flex flex-col gap-1 mb-2">
-                            {(entry.work_items || []).slice(0, 3).map((wi, i) => (
+                            {[...(entry.work_items || [])].sort((a, b) => (b.time_minutes || 0) - (a.time_minutes || 0)).slice(0, 3).map((wi, i) => (
                               <div key={i} className="flex items-start gap-2">
                                 <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: COLOURS[i % COLOURS.length] }} />
                                 <p className="text-xs text-[var(--pulse-muted)] truncate flex-1">{wi.detail || '—'}</p>
