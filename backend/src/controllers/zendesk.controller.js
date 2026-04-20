@@ -10,6 +10,7 @@ const zendeskRequest = (subdomain, email, token, path) => {
       method: 'GET',
       minVersion: 'TLSv1.2',
       headers: { 'Authorization': 'Basic ' + auth, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    };
     const req = https.request(options, (res) => {
       let data = '';
       res.on('data', chunk => { data += chunk; });
