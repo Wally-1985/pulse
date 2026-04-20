@@ -47,7 +47,7 @@ export default function EntriesListPage() {
       .finally(() => setLoading(false));
   }, [weekOffset]);
 
-  const entryForDate = (date) => entries.find(e => e.entry_date === date);
+  const entryForDate = (date) => entries.find(e => String(e.entry_date).substring(0,10) === date);
   const weekLabel = weekOffset === 0 ? 'This Week'
     : weekOffset === -1 ? 'Last Week'
     : format(weekStart, 'MMM d, yyyy');
