@@ -1,5 +1,4 @@
 ﻿const { query } = require('../config/database');
-const { query } = require('../config/database');
 const https = require('https');
 
 const zendeskRequest = (subdomain, email, token, path) => {
