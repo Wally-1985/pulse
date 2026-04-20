@@ -1,4 +1,4 @@
-const { query } = require('../config/database');
+﻿const { query } = require('../config/database');
 const { subWeeks } = require('date-fns');
 
 // GET /manager/team-status?date=YYYY-MM-DD
@@ -14,12 +14,12 @@ exports.getDayStatus = async (req, res) => {
     if (!teamIds.length) return res.json([]);
 
     const membersResult = await query(
-      `SELECT DISTINCT u.id, u.first_name, u.last_name, u.email, u.avatar_url, t.id as team_id, t.name as team_name
+      `SELECT DISTINCT ON (u.id) u.id, u.first_name, u.last_name, u.email, u.avatar_url, t.id as team_id, t.name as team_name
        FROM user_teams ut
        JOIN users u ON u.id = ut.user_id
        JOIN teams t ON t.id = ut.team_id
        WHERE ut.team_id = ANY($1) AND u.is_active = true AND u.deleted_at IS NULL
-       ORDER BY t.name, u.last_name`,
+       ORDER BY u.id, t.parent_id NULLS FIRST, t.name`,
       [teamIds]
     );
 
