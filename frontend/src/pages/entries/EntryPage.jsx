@@ -18,7 +18,7 @@ const COLOURS = ['#6366f1', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6
 let idCounter = 0;
 const tempId = () => `temp_${++idCounter}`;
 
-const today = () => { const d = new Date(); return ${d.getFullYear()}--; };
+const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
 
 const rebalance = (items, totalMinutes) => {
   const locked = items.filter(i => i.isLocked);
