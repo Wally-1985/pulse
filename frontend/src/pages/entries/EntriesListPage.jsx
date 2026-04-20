@@ -122,7 +122,7 @@ export default function EntriesListPage() {
                             )}
                           </div>
                         )}
-                        {entry.work_items?.length > 0 && <MiniTimeBar items={entry.work_items} />}
+                        {entry.work_items?.length > 0 && <MiniTimeBar items={entry.work_items} totalMinutes={entry.working_day_minutes || 540} />}
                       </>
                     )}
                   </div>
@@ -140,14 +140,18 @@ export default function EntriesListPage() {
   );
 }
 
-function MiniTimeBar({ items }) {
-  const total = items.reduce((s, i) => s + (i.time_minutes || 0), 0);
-  if (total === 0) return null;
+function MiniTimeBar({ items, totalMinutes = 540 }) {
+  const allocated = items.reduce((s, i) => s + (i.time_minutes || 0), 0);
+  if (allocated === 0) return null;
+  const unallocated = Math.max(0, totalMinutes - allocated);
   return (
     <div className="h-1.5 rounded-full overflow-hidden flex mt-1">
       {items.map((item, i) => (
-        <div key={i} style={{ width: ((item.time_minutes / total) * 100) + '%', background: COLOURS[i % COLOURS.length] }} />
+        <div key={i} style={{ width: ((item.time_minutes / totalMinutes) * 100) + '%', background: COLOURS[i % COLOURS.length] }} />
       ))}
+      {unallocated > 0 && (
+        <div style={{ width: ((unallocated / totalMinutes) * 100) + '%', background: 'rgba(80,80,90,0.35)', backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.12) 0px, rgba(255,255,255,0.12) 1px, transparent 1px, transparent 5px)' }} />
+      )}
     </div>
   );
 }
