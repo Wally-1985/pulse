@@ -30,7 +30,7 @@ exports.getEntry = async (req, res) => {
 
   try {
     const entryResult = await query(
-      `SELECT * FROM daily_entries WHERE user_id = $1 AND entry_date = $2 AND deleted_at IS NULL`,
+      `SELECT id, user_id, entry_date::text as entry_date, status, submitted_at, created_at, updated_at FROM daily_entries WHERE user_id = $1 AND entry_date = $2 AND deleted_at IS NULL`,
       [userId, date]
     );
 
@@ -50,7 +50,7 @@ exports.getEntry = async (req, res) => {
     res.json({
       id: entry.id,
       userId: entry.user_id,
-      date: entry.entry_date instanceof Date ? (entry.entry_date.getFullYear() + '-' + String(entry.entry_date.getUTCMonth()+1).padStart(2,'0') + '-' + String(entry.entry_date.getUTCDate()).padStart(2,'0')) : String(entry.entry_date).substring(0,10),
+      date: entry.entry_date,
       status: entry.status,
       submittedAt: entry.submitted_at,
       workingDayMinutes: workingMinutes,
@@ -84,7 +84,7 @@ exports.upsertEntry = async (req, res) => {
 
     // Get or create entry
     let entryResult = await client.query(
-      `SELECT * FROM daily_entries WHERE user_id = $1 AND entry_date = $2 AND deleted_at IS NULL`,
+      `SELECT id, user_id, entry_date::text as entry_date, status, submitted_at, created_at, updated_at FROM daily_entries WHERE user_id = $1 AND entry_date = $2 AND deleted_at IS NULL`,
       [userId, date]
     );
 
@@ -156,7 +156,7 @@ exports.upsertEntry = async (req, res) => {
 
     res.json({
       id: entry.id,
-      date: entry.entry_date instanceof Date ? (entry.entry_date.getFullYear() + '-' + String(entry.entry_date.getUTCMonth()+1).padStart(2,'0') + '-' + String(entry.entry_date.getUTCDate()).padStart(2,'0')) : String(entry.entry_date).substring(0,10),
+      date: entry.entry_date,
       status: entry.status,
       workingDayMinutes: workingMinutes,
       workItems: assignColours(insertedItems.map(i => ({
