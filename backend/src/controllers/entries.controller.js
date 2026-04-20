@@ -1,4 +1,4 @@
-const { query, getClient } = require('../config/database');
+﻿const { query, getClient } = require('../config/database');
 const { audit } = require('../services/audit');
 const { v4: uuidv4 } = require('uuid');
 
@@ -296,7 +296,7 @@ exports.getWeekEntries = async (req, res) => {
 
   try {
     const result = await query(
-      `SELECT de.*, 
+      `SELECT de.id, de.user_id, de.entry_date::text as entry_date, de.status, de.submitted_at, de.created_at, de.updated_at,
         json_agg(wi.* ORDER BY wi.sort_order) FILTER (WHERE wi.id IS NOT NULL AND wi.deleted_at IS NULL) as work_items
        FROM daily_entries de
        LEFT JOIN work_items wi ON wi.entry_id = de.id
