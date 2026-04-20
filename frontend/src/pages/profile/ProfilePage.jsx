@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { usersApi, authApi } from '../../api';
+import { usersApi, authApi, zendeskApi } from '../../api';
 import { Card, Button, Input, Badge, Modal, Spinner, Avatar } from '../../components/ui';
 import toast from 'react-hot-toast';
 import { usePageTitle } from '../../hooks/usePageTitle';
@@ -54,6 +54,7 @@ export default function ProfilePage() {
           { key: 'profile', label: 'Profile' },
           { key: 'security', label: 'Security' },
           { key: 'sessions', label: 'Sessions' },
+    { key: 'zendesk', label: 'Zendesk' },
         ].map(tab => (
           <button
             key={tab.key}
@@ -79,6 +80,7 @@ export default function ProfilePage() {
         refreshUser();
       }} />}
       {activeTab === 'sessions' && <SessionsTab sessions={sessions} currentSessionRefresh={() => authApi.getSessions().then(r => setSessions(r.data))} />}
+      {activeTab === 'zendesk' && <ZendeskTab />}
     </div>
   );
 }
@@ -325,6 +327,69 @@ function SessionsTab({ sessions, currentSessionRefresh }) {
           </div>
         ))}
         {sessions.length === 0 && <p className="text-sm text-[var(--pulse-muted)] text-center py-6">No active sessions</p>}
+      </div>
+    </Card>
+  );
+}
+
+function ZendeskTab() {
+  const [form, setForm] = useState({ subdomain: '', email: '', apiToken: '', enabled: true });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [hasToken, setHasToken] = useState(false);
+
+  useEffect(() => {
+    zendeskApi.getSettings().then(r => {
+      setForm({ subdomain: r.data.subdomain || '', email: r.data.email || '', apiToken: '', enabled: r.data.enabled !== false });
+      setHasToken(r.data.has_token);
+    }).finally(() => setLoading(false));
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await zendeskApi.saveSettings(form);
+      toast.success('Zendesk settings saved');
+      if (form.apiToken) setHasToken(true);
+    } catch { toast.error('Failed to save'); }
+    finally { setSaving(false); }
+  };
+
+  const handleTest = async () => {
+    setTesting(true);
+    try {
+      const r = await zendeskApi.testConnection();
+      toast.success('Connected as ' + r.data.name + ' (' + r.data.email + ')');
+    } catch (err) { toast.error(err.response?.data?.error || 'Connection failed'); }
+    finally { setTesting(false); }
+  };
+
+  if (loading) return <div className="flex justify-center py-10"><Spinner /></div>;
+
+  return (
+    <Card className="p-5">
+      <h2 className="text-base font-semibold mb-1">Zendesk Integration</h2>
+      <p className="text-sm text-[var(--pulse-muted)] mb-4">Connect your Zendesk account to see today's ticket activity on your daily entry page.</p>
+      <div className="flex flex-col gap-4">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={form.enabled} onChange={e => setForm(f => ({ ...f, enabled: e.target.checked }))} className="rounded" />
+          <span className="text-sm">Enable Zendesk integration</span>
+        </label>
+        <Input label="Zendesk Subdomain" placeholder="yourcompany (from yourcompany.zendesk.com)" value={form.subdomain} onChange={e => setForm(f => ({ ...f, subdomain: e.target.value }))} />
+        <Input label="Your Zendesk Email" type="email" placeholder="you@company.com" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+        <Input
+          label="API Token"
+          type="password"
+          placeholder={hasToken ? 'Token saved — enter new token to update' : 'Paste your Zendesk API token'}
+          value={form.apiToken}
+          onChange={e => setForm(f => ({ ...f, apiToken: e.target.value }))}
+          hint="Generate at Admin > Apps and Integrations > Zendesk API > API Tokens"
+        />
+        <div className="flex gap-2">
+          <Button onClick={handleSave} loading={saving}>Save Settings</Button>
+          <Button variant="secondary" onClick={handleTest} loading={testing} disabled={!hasToken && !form.apiToken}>Test Connection</Button>
+        </div>
       </div>
     </Card>
   );

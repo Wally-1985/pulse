@@ -268,6 +268,20 @@ const migrate = async () => {
     `);
 
     // ─── INDEXES ───────────────────────────────────────────────────────────
+    // Zendesk user settings
+    await client.query(`CREATE TABLE IF NOT EXISTS user_zendesk_settings (
+      user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      subdomain VARCHAR(255),
+      email VARCHAR(255),
+      api_token VARCHAR(500),
+      enabled BOOLEAN DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+
+    // Add zendesk_settings to existing tables if not present
+    await client.query(`ALTER TABLE user_zendesk_settings ADD COLUMN IF NOT EXISTS enabled BOOLEAN DEFAULT true`);
+
     // Add working_day_minutes to existing tables if not present
     await client.query(`ALTER TABLE daily_entries ADD COLUMN IF NOT EXISTS working_day_minutes INTEGER DEFAULT 540`);
 

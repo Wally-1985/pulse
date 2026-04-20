@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { entriesApi } from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import TimeBar, { formatTime, formatPct } from '../../components/TimeBar';
+import ZendeskActivity from '../../components/ZendeskActivity';
 import { Button, Select, Badge, Spinner } from '../../components/ui';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import toast from 'react-hot-toast';
@@ -192,7 +193,7 @@ export default function EntryPage() {
   const totalAllocated = workItems.reduce((s, i) => s + i.timeMinutes, 0);
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-5xl mx-auto"><div className="flex gap-6 items-start"><div className="flex-1 min-w-0">
       {/* Header */}
       <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
         <div>

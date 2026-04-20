@@ -1,4 +1,4 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
@@ -86,6 +86,14 @@ export const notificationsApi = {
   markRead: (id) => api.put(`/notifications/${id}/read`),
   markAllRead: () => api.put('/notifications/read-all'),
   delete: (id) => api.delete(`/notifications/${id}`),
+};
+
+// Zendesk
+export const zendeskApi = {
+  getSettings: () => api.get('/zendesk/settings'),
+  saveSettings: (data) => api.put('/zendesk/settings', data),
+  testConnection: () => api.get('/zendesk/test'),
+  getTodayActivity: () => api.get('/zendesk/today'),
 };
 
 // Admin

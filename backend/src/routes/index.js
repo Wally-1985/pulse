@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const { authenticate, isAdmin, isManager } = require('../middleware/auth');
 
@@ -9,6 +9,7 @@ const usersCtrl = require('../controllers/users.controller');
 const teamsCtrl = require('../controllers/teams.controller');
 const notificationsCtrl = require('../controllers/notifications.controller');
 const adminCtrl = require('../controllers/admin.controller');
+const zendeskCtrl = require('../controllers/zendesk.controller');
 
 // ─── AUTH ──────────────────────────────────────────────────────────────────
 router.post('/auth/login', authCtrl.login);
@@ -81,5 +82,11 @@ router.get('/admin/system-health', authenticate, isAdmin, adminCtrl.getSystemHea
 router.get('/admin/api-keys', authenticate, isAdmin, adminCtrl.getApiKeys);
 router.post('/admin/api-keys', authenticate, isAdmin, adminCtrl.createApiKey);
 router.delete('/admin/api-keys/:id', authenticate, isAdmin, adminCtrl.revokeApiKey);
+
+// ─── ZENDESK ───────────────────────────────────────────────────────────────
+router.get('/zendesk/settings', authenticate, zendeskCtrl.getSettings);
+router.put('/zendesk/settings', authenticate, zendeskCtrl.saveSettings);
+router.get('/zendesk/test', authenticate, zendeskCtrl.testConnection);
+router.get('/zendesk/today', authenticate, zendeskCtrl.getTodayActivity);
 
 module.exports = router;
