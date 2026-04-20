@@ -39,12 +39,23 @@ exports.getSettings = async (req, res) => {
 exports.saveSettings = async (req, res) => {
   const { subdomain, email, apiToken, enabled } = req.body;
   try {
-    await query(
-      'INSERT INTO user_zendesk_settings (user_id, subdomain, email, api_token, enabled, updated_at) VALUES ($1, $2, $3, $4, $5, NOW()) ON CONFLICT (user_id) DO UPDATE SET subdomain = EXCLUDED.subdomain, email = EXCLUDED.email, api_token = CASE WHEN EXCLUDED.api_token != '' THEN EXCLUDED.api_token ELSE user_zendesk_settings.api_token END, enabled = EXCLUDED.enabled, updated_at = NOW()',
-      [req.user.id, subdomain, email, apiToken || '', enabled !== false]
-    );
-    res.json({ message: 'Zendesk settings saved' });
-  } catch (err) { console.error('Zendesk saveSettings error:', err); res.status(500).json({ error: 'Failed to save: ' + err.message }); }
+    const sql = [
+      "INSERT INTO user_zendesk_settings",
+      "(user_id, subdomain, email, api_token, enabled, updated_at)",
+      "VALUES ($1, $2, $3, $4, $5, NOW())",
+      "ON CONFLICT (user_id) DO UPDATE SET",
+      "  subdomain = EXCLUDED.subdomain,",
+      "  email = EXCLUDED.email,",
+      "  api_token = CASE WHEN EXCLUDED.api_token != $6 THEN EXCLUDED.api_token ELSE user_zendesk_settings.api_token END,",
+      "  enabled = EXCLUDED.enabled,",
+      "  updated_at = NOW()"
+    ].join(" ");
+    await query(sql, [req.user.id, subdomain || "", email || "", apiToken || "", enabled !== false, ""]);
+    res.json({ message: "Zendesk settings saved" });
+  } catch (err) {
+    console.error("Zendesk saveSettings error:", err);
+    res.status(500).json({ error: "Failed to save: " + err.message });
+  }
 };
 
 exports.testConnection = async (req, res) => {
