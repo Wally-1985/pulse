@@ -47,6 +47,7 @@ export default function EntryPage() {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [date, setDate] = useState(searchParams.get('date') || today());
+  const viewUserId = searchParams.get('userId') || null;
   const [entry, setEntry] = useState(null);
   const [workItems, setWorkItems] = useState([]);
   const [totalMinutes, setTotalMinutes] = useState(9 * 60);
