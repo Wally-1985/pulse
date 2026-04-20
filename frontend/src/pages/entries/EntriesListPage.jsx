@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { entriesApi } from '../../api';
 import { useAuth } from '../../context/AuthContext';
@@ -27,15 +27,21 @@ export default function EntriesListPage() {
   const today = new Date().toISOString().split('T')[0];
 
   const weekStart = getWeekStart(weekOffset === 0 ? new Date() : addWeeks(new Date(), weekOffset));
+  const localDate = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const dy = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${dy}`;
+  };
   const weekDays = Array.from({ length: 5 }, (_, i) => {
     const d = new Date(weekStart);
     d.setDate(d.getDate() + i);
-    return d.toISOString().split('T')[0];
+    return localDate(d);
   });
 
   useEffect(() => {
     setLoading(true);
-    entriesApi.getWeekEntries(fmt(weekStart.toISOString().split('T')[0]))
+    entriesApi.getWeekEntries(localDate(weekStart))
       .then(r => setEntries(r.data || []))
       .catch(() => setEntries([]))
       .finally(() => setLoading(false));
