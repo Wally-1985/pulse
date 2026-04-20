@@ -334,7 +334,6 @@ function WorkItemRow({ item, index, totalMinutes, readOnly, onUpdate, onRemove, 
       onDrop={() => setIsDragOver(false)}
       onDragEnd={onDragEnd}
       <div className="px-3 py-2.5 flex gap-2.5 items-center">
-      <div className="px-3 py-2.5 flex gap-2.5 items-start">
         <div className="flex flex-row items-center gap-1.5 shrink-0">
         <div className="flex flex-row items-center gap-1.5 shrink-0 mt-2">
           {!readOnly && (
