@@ -220,7 +220,7 @@ export default function EntryPage() {
           {entry?.status === 'draft' && <Badge variant="warning">Draft</Badge>}
           {!entry && !loading && <Badge variant="default">New Entry</Badge>}
           {isSubmitted && !isEditing && (<Button size="sm" variant="secondary" onClick={() => setIsEditing(true)}>Edit Entry</Button>)}
-          {isSubmitted && isEditing && (<Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>Cancel</Button>)}
+
         </div>
 
         {loading ? (
