@@ -7,7 +7,7 @@ import { Avatar, Badge } from '../ui';
 const NAV = [
   { to: '/dashboard', label: 'Home',           icon: '⚡', roles: ['member','manager','admin'] },
   { to: '/entries',   label: 'My Entries',     icon: '📋', roles: ['member','manager','admin'] },
-  { to: '/projects',  label: 'Projects',       icon: '🗂️', roles: ['member','manager','admin'] },
+  { to: '/projects',  label: 'Project List',   icon: '🗂️', roles: ['member','manager','admin'] },
   { to: '/manager',   label: 'Team Dashboard', icon: '👥', roles: ['manager','admin'] },
   { to: '/admin',     label: 'Settings',       icon: '⚙️', roles: ['admin'] },
   { to: '/admin/users', label: 'Users',        icon: '👤', roles: ['admin'] },

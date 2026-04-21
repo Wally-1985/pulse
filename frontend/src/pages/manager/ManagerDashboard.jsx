@@ -126,7 +126,6 @@ export default function ManagerDashboard() {
           { key: 'today', label: 'Daily Status' },
           { key: 'week', label: 'This Week' },
           { key: 'charts', label: 'Charts' },
-          { key: 'projects', label: 'Projects' },
           { key: 'submissions', label: 'Submission Status' },
           { key: 'zendesk', label: 'Zendesk Activity' },
         ].map(tab => (
@@ -215,10 +214,6 @@ export default function ManagerDashboard() {
 
       {activeTab === 'submissions' && (
         <SubmissionStatusTab />
-      )}
-
-      {activeTab === 'projects' && (
-        <ProjectsManagerTab />
       )}
     </div>
   );
