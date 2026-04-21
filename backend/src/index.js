@@ -1,3 +1,7 @@
+﻿// Fix TLS handshake failures with Node 22 + OpenSSL 3.5 against services
+// using post-quantum key exchange (X25519MLKEM768). Must be first.
+require('tls').DEFAULT_ECDH_CURVE = 'P-256:P-384:P-521:X25519';
+
 require('dotenv').config();
 const express = require('express');
 const helmet = require('helmet');
@@ -22,7 +26,7 @@ app.use(express.urlencoded({ extended: true }));
 // ─── REQUEST LOGGING (dev) ─────────────────────────────────────────────────
 if (process.env.NODE_ENV === 'development') {
   app.use((req, _res, next) => {
-    console.log(`${req.method} ${req.path}`);
+    console.log(req.method + ' ' + req.path);
     next();
   });
 }
@@ -44,11 +48,11 @@ app.use((err, _req, res, _next) => {
 
 // ─── START ─────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`\n🫀 Pulse API running on port ${PORT}`);
-  console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`   Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}\n`);
-
-  // Start daily reminder scheduler
+  console.log('');
+  console.log('Pulse API running on port ' + PORT);
+  console.log('  Environment: ' + (process.env.NODE_ENV || 'development'));
+  console.log('  Frontend URL: ' + (process.env.FRONTEND_URL || 'http://localhost:5173'));
+  console.log('');
   if (process.env.NODE_ENV !== 'test') {
     startScheduler();
   }
