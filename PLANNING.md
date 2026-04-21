@@ -1,4 +1,4 @@
-# Pulse — Planning & Technical Notes
+﻿# Pulse — Planning & Technical Notes
 
 This document tracks design decisions, known issues, architectural choices, and outstanding work.
 
@@ -182,8 +182,102 @@ npm run db:seed
 | SSO settings not showing in Admin | Fixed | Conditional render when auth_method === 'sso' |
 | Backup only dumped DB | Fixed | Now ZIP with DB + source + settings |
 | Per-team roles not supported | Fixed | teamRoles object in users controller |
-| Zendesk built-in https module TLS failure | Fixed | Switched to axios for outbound requests |
+| Zendesk built-in https module TLS failure | Fixed | Switched to axios; ecdhCurve fix for Node 22/OpenSSL 3.5 post-quantum KEM |
+| Zendesk subdomain stored with .zendesk.com suffix | Fixed | Strip .zendesk.com on save in saveSettings |
+| Zendesk 429 rate limiting on audit fetch | Fixed | 200ms delay between requests, cap 20 tickets |
+| Missing user jameswilliams@agnvet.com.au | Fixed | Was soft-deleted; restored via DB |
+| Backup zip failing silently | Fixed | Use relative path in zip command with cwd: BACKUP_DIR |
+| Delete button on users | Fixed | Renamed to Archive; Archived Users modal with Restore added |
+| Users list missing getArchivedUsers/restoreUser API methods | Fixed | Added to api/index.js |
 
+
+---
+
+## V2 Feature Progress
+
+### Task 1 — Daily Entry UX (COMPLETE)
+- [x] Rename 'Add Work Item' to 'Add Item'
+- [x] Move 'Add Item' button above the items list
+- [x] Move 'Add 1h Lunch' button above the items list
+- [x] Move submit button above the list
+- [x] Rename to 'Submit Entry' / 'Resubmit Entry'
+- [x] Cancel button left of Resubmit (removed from header)
+
+### Draft / Auto-save (NOT STARTED)
+- [ ] Local draft save, restore on load
+- [ ] Server-side draft preferred
+
+### Zendesk Activity Panel (COMPLETE)
+- [x] Per-user Zendesk credentials in Profile
+- [x] Today's ticket activity panel on Daily Entry page
+- [x] Shows: Ticket Created, Public Reply, Internal Note, Status changes, Reopened
+- [x] Checkbox per ticket — adds single "Zendesk Tickets" work item
+- [x] Uncheck all = work item removed
+- [x] TLS fix for Node 22 + OpenSSL 3.5 (ecdhCurve / createSecureContext)
+- [x] Rate limiting: 200ms delay, 20 ticket cap
+
+### Ongoing Tasks (COMPLETE)
+- [x] ongoing_tasks DB table
+- [x] "Done" checkbox on each work item
+- [x] Uncompleted items carry forward to next day
+- [x] OngoingTasks panel below Zendesk Activity
+- [x] + Add button pulls task into today's entry
+- [x] Red X to dismiss task permanently
+- [x] Sync on entry submit
+
+### Task 2 — Activity Sources (NOT STARTED)
+- [ ] Architecture + first working integration (Outlook calendar recommended)
+
+### Task 3 — Staff Roster (NOT STARTED)
+- [ ] Roster start/finish times per user
+- [ ] Working days Mon-Sun flags per user
+
+### Task 4 — State-Based Holidays (NOT STARTED)
+- [ ] Australian state field on user profiles
+- [ ] State selector on holiday records
+
+### Task 5 — Backup (COMPLETE)
+- [x] pg_dump + zip working on Pi
+- [x] Delete button per backup
+- [x] List refreshes after backup runs
+- [x] 120s frontend timeout
+
+### Task 6 — Missing User (COMPLETE)
+- [x] jameswilliams@agnvet.com.au restored
+
+### Task 7 — Documentation (IN PROGRESS)
+- [x] PLANNING.md updated
+- [x] README.md updated
+- [ ] Pulse_Planning_Documentation_V2.docx V2 feature status to be updated
+
+### Task 8 — Azure OpenAI Groundwork (NOT STARTED)
+- [ ] Admin settings for endpoint, key, deployment, version, toggle
+- [ ] Provider abstraction service layer
+- [ ] Audit logging + feature flags
+
+### Task 9 — AI Use Case Structures (NOT STARTED)
+- [ ] Prompt template store with version field
+- [ ] Summary history table
+- [ ] AI job/automation table
+
+### Task 11 — Zendesk Team Manager View (NOT STARTED)
+- [ ] Zendesk Activity (Today) page under Team Manager
+
+### Tasks 12-14 — Project Management (NOT STARTED)
+- [ ] Projects table + status model + priority
+- [ ] Task list per project
+- [ ] Notes per project
+- [ ] User assignments
+- [ ] Last activity date auto-update
+- [ ] Project health indicator (green/amber/red)
+- [ ] Daily entry integration (link work items to projects)
+- [ ] Manager dashboard project visibility
+
+### Submission Status Dashboard (NOT STARTED)
+- [ ] Manager view: Submitted / Not Submitted / Rostered Off
+
+### Missing Entry Alerts (NOT STARTED)
+- [ ] Notification if rostered staff haven't submitted by configurable time
 ---
 
 ## Planned Features (Phase 2)

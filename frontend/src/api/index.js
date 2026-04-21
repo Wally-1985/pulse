@@ -47,6 +47,9 @@ export const entriesApi = {
   upsertEntry: (data) => api.post('/entries', data),
   submitEntry: (id) => api.post(`/entries/${id}/submit`),
   deleteEntry: (id) => api.delete(`/entries/${id}`),
+  getDraft: (date) => api.get('/entries/draft?date=' + date),
+  saveDraft: (data) => api.put('/entries/draft', data),
+  deleteDraft: (date) => api.delete('/entries/draft?date=' + date),
   getWeekEntries: (weekStart, userId) => api.get('/entries/week', { params: { weekStart, userId } }),
 };
 

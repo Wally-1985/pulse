@@ -238,6 +238,57 @@ exports.submitEntry = async (req, res) => {
   }
 };
 
+
+// GET /entries/draft?date=YYYY-MM-DD
+exports.getDraft = async (req, res) => {
+  const date = req.query.date;
+  if (!date) return res.status(400).json({ error: 'date required' });
+  try {
+    const result = await query(
+      'SELECT draft_json, updated_at FROM entry_drafts WHERE user_id = $1 AND entry_date = $2',
+      [req.user.id, date]
+    );
+    if (result.rows.length === 0) return res.json(null);
+    res.json({ draft: result.rows[0].draft_json, updatedAt: result.rows[0].updated_at });
+  } catch (err) {
+    console.error('getDraft error:', err);
+    res.status(500).json({ error: 'Failed to get draft' });
+  }
+};
+
+// PUT /entries/draft
+exports.saveDraft = async (req, res) => {
+  const { date, workItems } = req.body;
+  if (!date) return res.status(400).json({ error: 'date required' });
+  try {
+    await query(
+      `INSERT INTO entry_drafts (user_id, entry_date, draft_json, updated_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (user_id, entry_date) DO UPDATE
+       SET draft_json = EXCLUDED.draft_json, updated_at = NOW()`,
+      [req.user.id, date, JSON.stringify({ workItems: workItems || [] })]
+    );
+    res.json({ message: 'Draft saved' });
+  } catch (err) {
+    console.error('saveDraft error:', err);
+    res.status(500).json({ error: 'Failed to save draft' });
+  }
+};
+
+// DELETE /entries/draft?date=YYYY-MM-DD
+exports.deleteDraft = async (req, res) => {
+  const date = req.query.date;
+  if (!date) return res.status(400).json({ error: 'date required' });
+  try {
+    await query(
+      'DELETE FROM entry_drafts WHERE user_id = $1 AND entry_date = $2',
+      [req.user.id, date]
+    );
+    res.json({ message: 'Draft cleared' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to clear draft' });
+  }
+};
 // DELETE /entries/:id
 exports.deleteEntry = async (req, res) => {
   const { id } = req.params;

@@ -30,6 +30,9 @@ router.get('/profile', authenticate, usersCtrl.getProfile);
 router.put('/profile', authenticate, usersCtrl.updateProfile);
 
 // ─── DAILY ENTRIES ─────────────────────────────────────────────────────────
+router.get('/entries/draft', authenticate, entriesCtrl.getDraft);
+router.put('/entries/draft', authenticate, entriesCtrl.saveDraft);
+router.delete('/entries/draft', authenticate, entriesCtrl.deleteDraft);
 router.get('/entries/week', authenticate, entriesCtrl.getWeekEntries);
 router.get('/entries/:date', authenticate, entriesCtrl.getEntry);
 router.post('/entries', authenticate, entriesCtrl.upsertEntry);

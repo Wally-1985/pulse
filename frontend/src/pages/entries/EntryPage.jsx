@@ -227,6 +227,27 @@ export default function EntryPage() {
           <div className="flex justify-center py-20"><Spinner size="lg" /></div>
         ) : (
           <>
+
+          {/* Draft restore prompt */}
+          {draftPrompt && (
+            <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-amber-400">Unsaved draft found</p>
+                <p className="text-xs text-[var(--pulse-muted)]">
+                  {draftPrompt.draft.workItems.length} work item{draftPrompt.draft.workItems.length !== 1 ? 's' : ''} saved {new Date(draftPrompt.updatedAt).toLocaleTimeString()}
+                </p>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <Button size="xs" variant="secondary" onClick={() => setDraftPrompt(null)}>Discard</Button>
+                <Button size="xs" onClick={() => {
+                  const restored = assignColours(draftPrompt.draft.workItems);
+                  setWorkItems(restored);
+                  setDraftPrompt(null);
+                  toast.success('Draft restored');
+                }}>Restore Draft</Button>
+              </div>
+            </div>
+          )}
             {/* Toolbar: add buttons left, submit right */}
             <div className="flex items-center justify-between mb-4 gap-2">
               <div className="flex gap-2">

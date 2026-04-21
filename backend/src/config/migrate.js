@@ -293,6 +293,17 @@ const migrate = async () => {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     )`);
 
+    // Entry drafts (Section 4.2 - Draft/Auto-save)
+    await client.query(`CREATE TABLE IF NOT EXISTS entry_drafts (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      entry_date DATE NOT NULL,
+      draft_json JSONB NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(user_id, entry_date)
+    )`);
+
     // Add zendesk_settings to existing tables if not present
     await client.query(`ALTER TABLE user_zendesk_settings ADD COLUMN IF NOT EXISTS enabled BOOLEAN DEFAULT true`);
 
