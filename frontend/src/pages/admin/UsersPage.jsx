@@ -84,13 +84,20 @@ export default function UsersPage() {
                     {user.locked_until && new Date(user.locked_until) > new Date() && <Badge variant="warning">Locked</Badge>}
                   </div>
                   <p className="text-xs text-[var(--pulse-muted)]">{user.email}</p>
-                  {(user.teams || []).filter(Boolean).length > 0 && (
-                    <p className="text-xs text-[var(--pulse-muted)] mt-0.5">Teams: {user.teams.filter(Boolean).join(', ')}</p>
+                  {(user.team_ids || []).filter(Boolean).length > 0 && (
+                    <p className="text-xs text-[var(--pulse-muted)] mt-0.5">
+                      {(user.team_ids || []).filter(Boolean).map(tid => {
+                        const team = teams.find(t => t.id === tid);
+                        if (!team) return null;
+                        const isManager = (user.manager_team_ids || []).includes(tid);
+                        return team.name + ' (' + (isManager ? 'manager' : 'member') + ')';
+                      }).filter(Boolean).join(', ')}
+                    </p>
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 flex-wrap justify-end shrink-0">
-                  {(user.roles || []).map(r => (
-                    <Badge key={r} variant={r === 'admin' ? 'danger' : r === 'manager' ? 'accent' : 'default'}>{r}</Badge>
+                  {(user.roles || []).filter(r => r === 'admin').map(r => (
+                    <Badge key={r} variant="danger">{r}</Badge>
                   ))}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
