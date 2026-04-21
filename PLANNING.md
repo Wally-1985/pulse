@@ -203,9 +203,9 @@ npm run db:seed
 - [x] Rename to 'Submit Entry' / 'Resubmit Entry'
 - [x] Cancel button left of Resubmit (removed from header)
 
-### Draft / Auto-save (NOT STARTED)
-- [ ] Local draft save, restore on load
-- [ ] Server-side draft preferred
+### Draft / Auto-save (COMPLETE)
+- [x] Local draft save, restore on load
+- [x] Server-side draft in entry_drafts table, restore banner on load, cleared on submit
 
 ### Zendesk Activity Panel (COMPLETE)
 - [x] Per-user Zendesk credentials in Profile
@@ -228,13 +228,13 @@ npm run db:seed
 ### Task 2 — Activity Sources (NOT STARTED)
 - [ ] Architecture + first working integration (Outlook calendar recommended)
 
-### Task 3 — Staff Roster (NOT STARTED)
-- [ ] Roster start/finish times per user
-- [ ] Working days Mon-Sun flags per user
+### Task 3 — Staff Roster (COMPLETE)
+- [x] Roster start/finish times per user
+- [x] Working days Mon-Sun flags per user, Roster Settings tab in Teams
 
-### Task 4 — State-Based Holidays (NOT STARTED)
-- [ ] Australian state field on user profiles
-- [ ] State selector on holiday records
+### Task 4 — State-Based Holidays (COMPLETE)
+- [x] Australian state field on user profiles and user edit modal
+- [x] State selector on holiday records, reminders skip state-specific holidays
 
 ### Task 5 — Backup (COMPLETE)
 - [x] pg_dump + zip working on Pi
@@ -260,8 +260,8 @@ npm run db:seed
 - [ ] Summary history table
 - [ ] AI job/automation table
 
-### Task 11 — Zendesk Team Manager View (NOT STARTED)
-- [ ] Zendesk Activity (Today) page under Team Manager
+### Task 11 — Zendesk Team Manager View (COMPLETE)
+- [x] Zendesk Activity tab in Team Dashboard with filters, member breakdown, awaiting response
 
 ### Tasks 12-14 — Project Management (NOT STARTED)
 - [ ] Projects table + status model + priority
@@ -273,11 +273,11 @@ npm run db:seed
 - [ ] Daily entry integration (link work items to projects)
 - [ ] Manager dashboard project visibility
 
-### Submission Status Dashboard (NOT STARTED)
-- [ ] Manager view: Submitted / Not Submitted / Rostered Off
+### Submission Status Dashboard (COMPLETE)
+- [x] Submission Status tab in Team Dashboard with date picker
 
-### Missing Entry Alerts (NOT STARTED)
-- [ ] Notification if rostered staff haven't submitted by configurable time
+### Missing Entry Alerts (COMPLETE)
+- [x] Configurable alert time in Admin settings, scheduler reads from system_settings
 ---
 
 ## Planned Features (Phase 2)

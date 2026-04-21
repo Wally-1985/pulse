@@ -10,6 +10,7 @@ const teamsCtrl = require('../controllers/teams.controller');
 const notificationsCtrl = require('../controllers/notifications.controller');
 const adminCtrl = require('../controllers/admin.controller');
 const zendeskCtrl = require('../controllers/zendesk.controller');
+const aiCtrl = require('../controllers/ai.controller');
 const tasksCtrl = require('../controllers/tasks.controller');
 
 // ─── AUTH ──────────────────────────────────────────────────────────────────
@@ -105,6 +106,15 @@ router.put('/zendesk/settings', authenticate, zendeskCtrl.saveSettings);
 router.get('/zendesk/test', authenticate, zendeskCtrl.testConnection);
 router.get('/zendesk/today', authenticate, zendeskCtrl.getTodayActivity);
 router.get('/manager/zendesk/today', authenticate, isManager, zendeskCtrl.getTeamTodayActivity);
+
+// ─── AI ────────────────────────────────────────────────────────────────────
+router.get('/ai/settings', authenticate, isAdmin, aiCtrl.getSettings);
+router.put('/ai/settings', authenticate, isAdmin, aiCtrl.saveSettings);
+router.post('/ai/settings/test', authenticate, isAdmin, aiCtrl.testConnection);
+router.get('/ai/prompt-templates', authenticate, isAdmin, aiCtrl.getPromptTemplates);
+router.post('/ai/prompt-templates', authenticate, isAdmin, aiCtrl.createPromptTemplate);
+router.put('/ai/prompt-templates/:id', authenticate, isAdmin, aiCtrl.updatePromptTemplate);
+router.get('/ai/jobs', authenticate, isAdmin, aiCtrl.getJobs);
 router.get('/manager/submissions/status', authenticate, isManager, managerCtrl.getSubmissionStatus);
 
 module.exports = router;

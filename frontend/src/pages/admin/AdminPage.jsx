@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { adminApi } from '../../api';
+import { adminApi, aiApi } from '../../api';
 import { Card, Button, Input, Badge, Spinner, Modal } from '../../components/ui';
 import toast from 'react-hot-toast';
 import { usePageTitle } from '../../hooks/usePageTitle';
@@ -11,6 +11,7 @@ const TABS = [
   { key: 'audit', label: 'Audit Log' },
   { key: 'backups', label: 'Backups' },
   { key: 'api', label: 'API Keys' },
+  { key: 'ai', label: 'AI Settings' },
   { key: 'health', label: 'System Health' },
 ];
 
@@ -57,6 +58,7 @@ export default function AdminPage() {
               {tab === 'backups' && <BackupsTab />}
               {tab === 'api' && <ApiKeysTab />}
               {tab === 'health' && <HealthTab />}
+              {tab === 'ai' && <AISettingsTab />}
             </>
           )}
         </div>
@@ -396,5 +398,152 @@ function HealthTab() {
         ))}
       </div>
     </Card>
+  );
+}
+
+
+const USE_CASES = ['weekly_summary', 'performance_form', 'zendesk_followup', 'manager_suggestion'];
+
+function AISettingsTab() {
+  const [settings, setSettings] = useState(null);
+  const [form, setForm] = useState({ endpoint: '', deployment: '', apiKey: '', apiVersion: '2024-02-01', enabled: false });
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+  const [templates, setTemplates] = useState([]);
+  const [showNewTemplate, setShowNewTemplate] = useState(false);
+  const [newTemplate, setNewTemplate] = useState({ name: '', templateText: '', useCase: 'weekly_summary' });
+
+  const load = async () => {
+    try {
+      const [s, t] = await Promise.all([aiApi.getSettings(), aiApi.getPromptTemplates()]);
+      setSettings(s.data);
+      setForm(f => ({ ...f, endpoint: s.data.endpoint || '', deployment: s.data.deployment || '', apiVersion: s.data.apiVersion || '2024-02-01', enabled: s.data.enabled || false }));
+      setTemplates(t.data);
+    } catch { toast.error('Failed to load AI settings'); }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try { await aiApi.saveSettings(form); toast.success('AI settings saved'); load(); }
+    catch { toast.error('Failed to save'); }
+    finally { setSaving(false); }
+  };
+
+  const handleTest = async () => {
+    setTesting(true); setTestResult(null);
+    try {
+      const r = await aiApi.testConnection();
+      setTestResult({ ok: true, msg: r.data.response });
+    } catch (err) {
+      setTestResult({ ok: false, msg: err.response?.data?.error || err.message });
+    } finally { setTesting(false); }
+  };
+
+  const handleAddTemplate = async () => {
+    if (!newTemplate.name || !newTemplate.templateText) return;
+    try {
+      await aiApi.createPromptTemplate(newTemplate);
+      toast.success('Template created');
+      setShowNewTemplate(false);
+      setNewTemplate({ name: '', templateText: '', useCase: 'weekly_summary' });
+      load();
+    } catch { toast.error('Failed to create template'); }
+  };
+
+  const toggleTemplate = async (id, enabled) => {
+    try {
+      await aiApi.updatePromptTemplate(id, { enabled: !enabled });
+      setTemplates(ts => ts.map(t => t.id === id ? { ...t, enabled: !enabled } : t));
+    } catch { toast.error('Failed to update template'); }
+  };
+
+  return (
+    <div className="flex flex-col gap-5">
+      <Card className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-base font-semibold">Azure OpenAI Configuration</h2>
+            <p className="text-xs text-[var(--pulse-muted)] mt-0.5">Connect Pulse to Azure OpenAI for AI-assisted features.</p>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={form.enabled} onChange={e => setForm(f => ({ ...f, enabled: e.target.checked }))} className="accent-[var(--pulse-accent)]" />
+            <span className="text-sm font-medium">Enabled</span>
+          </label>
+        </div>
+        <div className="flex flex-col gap-3">
+          <Input label="Endpoint URL" placeholder="https://your-resource.openai.azure.com" value={form.endpoint} onChange={e => setForm(f => ({ ...f, endpoint: e.target.value }))} />
+          <Input label="Deployment / Model Name" placeholder="gpt-4o" value={form.deployment} onChange={e => setForm(f => ({ ...f, deployment: e.target.value }))} />
+          <Input label="API Key" type="password" placeholder={settings?.hasApiKey ? 'Set — enter new key to change' : 'Enter API key'} value={form.apiKey} onChange={e => setForm(f => ({ ...f, apiKey: e.target.value }))} />
+          <Input label="API Version" placeholder="2024-02-01" value={form.apiVersion} onChange={e => setForm(f => ({ ...f, apiVersion: e.target.value }))} />
+        </div>
+        <div className="flex items-center gap-3 mt-4 flex-wrap">
+          <Button loading={saving} onClick={handleSave}>Save Settings</Button>
+          <Button variant="secondary" loading={testing} onClick={handleTest} disabled={!settings?.hasApiKey && !form.apiKey}>Test Connection</Button>
+          {testResult && (
+            <span className={'text-sm ' + (testResult.ok ? 'text-green-400' : 'text-red-400')}>
+              {testResult.ok ? '✓ ' : '✗ '}{testResult.msg}
+            </span>
+          )}
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-base font-semibold">Prompt Templates</h2>
+            <p className="text-xs text-[var(--pulse-muted)] mt-0.5">Versioned templates for AI use cases. Each save auto-increments the version.</p>
+          </div>
+          <Button size="sm" onClick={() => setShowNewTemplate(v => !v)}>+ New Template</Button>
+        </div>
+
+        {showNewTemplate && (
+          <div className="mb-4 p-4 bg-[var(--pulse-surface-2)] rounded-xl flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="Template Name" value={newTemplate.name} onChange={e => setNewTemplate(t => ({ ...t, name: e.target.value }))} />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium">Use Case</label>
+                <select value={newTemplate.useCase} onChange={e => setNewTemplate(t => ({ ...t, useCase: e.target.value }))}
+                  className="bg-[var(--pulse-surface)] border border-[var(--pulse-border)] rounded-lg px-3 py-2 text-sm text-[var(--pulse-text)]">
+                  {USE_CASES.map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Template Text</label>
+              <p className="text-xs text-[var(--pulse-muted)]">Use {'{{placeholder}}'} for variables e.g. {'{{staff_name}}'}, {'{{entries}}'}</p>
+              <textarea value={newTemplate.templateText} onChange={e => setNewTemplate(t => ({ ...t, templateText: e.target.value }))}
+                rows={6} className="bg-[var(--pulse-surface)] border border-[var(--pulse-border)] rounded-lg px-3 py-2 text-sm text-[var(--pulse-text)] font-mono resize-y" />
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleAddTemplate} disabled={!newTemplate.name || !newTemplate.templateText}>Save Template</Button>
+              <Button size="sm" variant="secondary" onClick={() => setShowNewTemplate(false)}>Cancel</Button>
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2">
+          {templates.length === 0 && <p className="text-sm text-[var(--pulse-muted)] text-center py-4">No templates yet.</p>}
+          {templates.map(t => (
+            <div key={t.id} className="flex items-start gap-3 p-3 bg-[var(--pulse-surface-2)] rounded-xl">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                  <p className="text-sm font-medium">{t.name}</p>
+                  <Badge variant="default">v{t.version}</Badge>
+                  <Badge variant="accent">{t.use_case}</Badge>
+                </div>
+                <p className="text-xs text-[var(--pulse-muted)] font-mono truncate">{t.template_text?.substring(0, 80)}...</p>
+              </div>
+              <label className="flex items-center gap-1.5 cursor-pointer shrink-0 mt-0.5">
+                <input type="checkbox" checked={t.enabled} onChange={() => toggleTemplate(t.id, t.enabled)} className="accent-[var(--pulse-accent)]" />
+                <span className="text-xs text-[var(--pulse-muted)]">Active</span>
+              </label>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
   );
 }

@@ -131,3 +131,13 @@ export const adminApi = {
   createApiKey: (data) => api.post('/admin/api-keys', data),
   revokeApiKey: (id) => api.delete(`/admin/api-keys/${id}`),
 };
+
+export const aiApi = {
+  getSettings: () => api.get('/ai/settings'),
+  saveSettings: (data) => api.put('/ai/settings', data),
+  testConnection: () => api.post('/ai/settings/test'),
+  getPromptTemplates: () => api.get('/ai/prompt-templates'),
+  createPromptTemplate: (data) => api.post('/ai/prompt-templates', data),
+  updatePromptTemplate: (id, data) => api.put('/ai/prompt-templates/' + id, data),
+  getJobs: () => api.get('/ai/jobs'),
+};

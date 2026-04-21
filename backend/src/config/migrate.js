@@ -301,6 +301,49 @@ const migrate = async () => {
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS roster_start_time TIME DEFAULT NULL`);
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS roster_finish_time TIME DEFAULT NULL`);
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS roster_working_days VARCHAR(7) DEFAULT 'MTWTF__'`);
+
+    // Task 8 - Azure OpenAI / AI infrastructure
+    await client.query(`CREATE TABLE IF NOT EXISTS ai_prompt_templates (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      name VARCHAR(100) NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      template_text TEXT NOT NULL,
+      use_case VARCHAR(50) NOT NULL,
+      enabled BOOLEAN DEFAULT true,
+      created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(name, version)
+    )`);
+
+    await client.query(`CREATE TABLE IF NOT EXISTS ai_summary_history (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      period_start DATE NOT NULL,
+      period_end DATE NOT NULL,
+      use_case VARCHAR(50) NOT NULL,
+      prompt_template_id UUID REFERENCES ai_prompt_templates(id) ON DELETE SET NULL,
+      prompt_template_version INTEGER,
+      summary_text TEXT NOT NULL,
+      generated_by UUID REFERENCES users(id) ON DELETE SET NULL,
+      generated_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+
+    await client.query(`CREATE TABLE IF NOT EXISTS ai_jobs (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      job_type VARCHAR(50) NOT NULL,
+      status VARCHAR(20) DEFAULT 'pending',
+      triggered_by UUID REFERENCES users(id) ON DELETE SET NULL,
+      input_json JSONB,
+      result_json JSONB,
+      error_message TEXT,
+      started_at TIMESTAMPTZ,
+      completed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_ai_jobs_status ON ai_jobs(status)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_ai_summary_user ON ai_summary_history(user_id, period_start)`);
     await client.query(`COMMENT ON COLUMN public_holidays.state IS 'NULL = applies to all states. QLD/NSW/VIC/SA/WA/TAS/NT/ACT = state-specific'`);
 
     // Entry drafts (Section 4.2 - Draft/Auto-save)
