@@ -67,7 +67,9 @@ export const usersApi = {
   createUser: (data) => api.post('/users', data),
   updateUser: (id, data) => api.put(`/users/${id}`, data),
   deleteUser: (id) => api.delete(`/users/${id}`),
-  unlockUser: (id) => api.post(`/users/${id}/unlock`),
+  unlockUser: (id) => api.post('/users/' + id + '/unlock'),
+  getArchivedUsers: () => api.get('/users/archived'),
+  restoreUser: (id) => api.post('/users/' + id + '/restore'),
   getProfile: () => api.get('/profile'),
   updateProfile: (data) => api.put('/profile', data),
 };
