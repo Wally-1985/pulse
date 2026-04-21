@@ -256,9 +256,9 @@ function BackupsTab() {
     try {
       const r = await adminApi.runBackup();
       toast.success('Backup created: ' + r.data.filename);
-      load();
     } catch (e) { toast.error(e.response?.data?.error || 'Backup failed'); }
-    finally { setRunning(false); }
+    finally { setRunning(false); load(); }
+  };
   };
   const formatSize = (bytes) => bytes > 1024*1024 ? (bytes/1024/1024).toFixed(1)+' MB' : (bytes/1024).toFixed(1)+' KB';
   return (
