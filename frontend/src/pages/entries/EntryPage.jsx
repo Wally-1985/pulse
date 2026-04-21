@@ -292,11 +292,33 @@ export default function EntryPage() {
 
       {/* Right column - Zendesk activity */}
       <div className="w-72 shrink-0 sticky top-20">
-        <ZendeskActivity onAddWorkItem={canEdit ? (zdItem) => {
-          const newItem = { id: ('temp_' + Date.now()), detail: zdItem.detail, workType: zdItem.workType, timeMinutes: 0, isLocked: false, colour: '' };
-          const updated = rebalance(assignColours([...workItems, newItem]), totalMinutes);
-          updateItems(updated);
-        } : null} />
+        <ZendeskActivity
+          readOnly={!canEdit}
+          onCheckedChange={canEdit ? (checkedIds, tickets) => {
+            const ZENDESK_ID = 'zendesk_tickets_item';
+            const existing = workItems.find(w => w.id === ZENDESK_ID);
+            if (checkedIds.length === 0) {
+              // Remove the Zendesk work item if all unchecked
+              if (existing) {
+                const filtered = workItems.filter(w => w.id !== ZENDESK_ID);
+                updateItems(rebalance(assignColours(filtered), totalMinutes));
+              }
+            } else {
+              // Build detail string from all checked tickets
+              const checkedTickets = tickets.filter(t => checkedIds.includes(String(t.id)));
+              const detail = 'Zendesk Tickets: ' + checkedTickets.map(t => '#' + t.id).join(', ');
+              if (existing) {
+                // Update the existing item detail
+                const updated = workItems.map(w => w.id === ZENDESK_ID ? { ...w, detail } : w);
+                updateItems(assignColours(updated));
+              } else {
+                // Add new Zendesk work item
+                const newItem = { id: ZENDESK_ID, detail, workType: 'bau_support', timeMinutes: 0, isLocked: false, colour: '' };
+                updateItems(rebalance(assignColours([...workItems, newItem]), totalMinutes));
+              }
+            }
+          } : null}
+        />
       </div>
     </div>
   );

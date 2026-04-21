@@ -1,14 +1,13 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { zendeskApi } from '../api';
 import { Card, Badge, Spinner } from './ui';
-import toast from 'react-hot-toast';
 
 const STATUS_COLOURS = { new: 'danger', open: 'warning', pending: 'info', hold: 'default', solved: 'success', closed: 'default' };
 
-export default function ZendeskActivity({ onAddWorkItem }) {
+export default function ZendeskActivity({ onCheckedChange, readOnly }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [adding, setAdding] = useState(null);
+  const [checked, setChecked] = useState({});
 
   const load = () => {
     setLoading(true);
@@ -20,15 +19,18 @@ export default function ZendeskActivity({ onAddWorkItem }) {
 
   useEffect(() => { load(); }, []);
 
-  const handleAdd = async (ticket) => {
-    if (!onAddWorkItem) return;
-    setAdding(ticket.id);
-    try {
-      onAddWorkItem({ detail: 'Zendesk #' + ticket.id + ' - ' + ticket.subject + ' (' + ticket.replyType + ')', workType: 'bau_support' });
-      toast.success('Work item added for #' + ticket.id);
-    } catch { toast.error('Failed to add work item'); }
-    finally { setAdding(null); }
+  const toggle = (ticketId) => {
+    if (readOnly) return;
+    setChecked(prev => {
+      const next = { ...prev, [ticketId]: !prev[ticketId] };
+      // Notify parent with list of checked ticket IDs
+      const checkedIds = Object.entries(next).filter(([, v]) => v).map(([k]) => k);
+      if (onCheckedChange) onCheckedChange(checkedIds, data?.tickets || []);
+      return next;
+    });
   };
+
+  const checkedCount = Object.values(checked).filter(Boolean).length;
 
   return (
     <Card className="p-4">
@@ -36,6 +38,7 @@ export default function ZendeskActivity({ onAddWorkItem }) {
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold">Today's Zendesk Activity</span>
           {data?.tickets?.length > 0 && <Badge variant="accent">{data.tickets.length}</Badge>}
+          {checkedCount > 0 && <Badge variant="success">{checkedCount} selected</Badge>}
         </div>
         <button onClick={load} className="text-[var(--pulse-muted)] hover:text-[var(--pulse-text)] transition-colors" title="Refresh">
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -53,36 +56,45 @@ export default function ZendeskActivity({ onAddWorkItem }) {
       ) : data.tickets.length === 0 ? (
         <p className="text-xs text-[var(--pulse-muted)] py-1">No Zendesk activity today.</p>
       ) : (
-        <div className="flex flex-col gap-2">
-          {data.tickets.map(ticket => (
-            <div key={ticket.id} className="p-2.5 bg-[var(--pulse-surface-2)] rounded-lg">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
-                    <a href={ticket.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                      className="text-xs font-mono font-bold text-[var(--pulse-accent)] hover:underline">
-                      #{ticket.id}
-                    </a>
-                    <Badge variant={STATUS_COLOURS[ticket.status] || 'default'}>{ticket.status}</Badge>
-                    <Badge variant={ticket.replyType.includes('Public') ? 'success' : 'info'}>
-                      {ticket.replyType}
-                    </Badge>
+        <>
+          {!readOnly && (
+            <p className="text-xs text-[var(--pulse-muted)] mb-2">Check tickets to add a Zendesk work item to your entry.</p>
+          )}
+          <div className="flex flex-col gap-2">
+            {data.tickets.map(ticket => (
+              <div
+                key={ticket.id}
+                onClick={() => toggle(ticket.id)}
+                className={'p-2.5 rounded-lg border transition-all ' + (readOnly ? 'bg-[var(--pulse-surface-2)] border-transparent' : 'cursor-pointer ' + (checked[ticket.id] ? 'bg-[var(--pulse-accent-soft)] border-[var(--pulse-accent)]/40' : 'bg-[var(--pulse-surface-2)] border-transparent hover:border-[var(--pulse-border)]'))}
+              >
+                <div className="flex items-start gap-2.5">
+                  {!readOnly && (
+                    <input
+                      type="checkbox"
+                      checked={!!checked[ticket.id]}
+                      onChange={() => toggle(ticket.id)}
+                      onClick={e => e.stopPropagation()}
+                      className="mt-0.5 shrink-0 accent-[var(--pulse-accent)]"
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                      <a href={ticket.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                        className="text-xs font-mono font-bold text-[var(--pulse-accent)] hover:underline">
+                        #{ticket.id}
+                      </a>
+                      <Badge variant={STATUS_COLOURS[ticket.status] || 'default'}>{ticket.status}</Badge>
+                      <Badge variant={ticket.replyType.includes('Public') ? 'success' : 'info'}>
+                        {ticket.replyType}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-[var(--pulse-text)] leading-snug break-words">{ticket.subject}</p>
                   </div>
-                  <p className="text-xs text-[var(--pulse-text)] leading-snug break-words">{ticket.subject}</p>
                 </div>
-                {onAddWorkItem && (
-                  <button
-                    onClick={() => handleAdd(ticket)}
-                    disabled={adding === ticket.id}
-                    className="shrink-0 text-[10px] px-2 py-1 rounded-md bg-[var(--pulse-accent-soft)] text-[var(--pulse-accent)] hover:bg-[var(--pulse-accent)] hover:text-white transition-colors disabled:opacity-50"
-                  >
-                    {adding === ticket.id ? '...' : '+ Add'}
-                  </button>
-                )}
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       )}
     </Card>
   );
