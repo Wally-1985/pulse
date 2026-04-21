@@ -81,6 +81,7 @@ router.get('/admin/audit-logs/export', authenticate, isAdmin, adminCtrl.exportAu
 router.post('/admin/backup', authenticate, isAdmin, adminCtrl.runBackup);
 router.get('/admin/backups', authenticate, isAdmin, adminCtrl.listBackups);
 router.get('/admin/backups/:filename/download', authenticate, isAdmin, adminCtrl.downloadBackup);
+router.delete('/admin/backups/:filename', authenticate, isAdmin, adminCtrl.deleteBackup);
 router.get('/admin/system-health', authenticate, isAdmin, adminCtrl.getSystemHealth);
 router.get('/admin/api-keys', authenticate, isAdmin, adminCtrl.getApiKeys);
 router.post('/admin/api-keys', authenticate, isAdmin, adminCtrl.createApiKey);

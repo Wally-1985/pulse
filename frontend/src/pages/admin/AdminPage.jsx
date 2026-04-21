@@ -245,6 +245,12 @@ function BackupsTab() {
   const [running, setRunning] = useState(false);
   const load = () => adminApi.listBackups().then(r => setBackups(r.data));
   useEffect(() => { load(); }, []);
+  const deleteBackup = async (filename) => {
+    if (!confirm('Delete ' + filename + '? This cannot be undone.')) return;
+    try { await adminApi.deleteBackup(filename); load(); toast.success('Backup deleted'); }
+    catch { toast.error('Failed to delete backup'); }
+  };
+
   const runBackup = async () => {
     setRunning(true);
     try {
@@ -269,6 +275,7 @@ function BackupsTab() {
               <p className="text-sm font-mono">{b.filename}</p>
               <p className="text-xs text-[var(--pulse-muted)]">{formatSize(b.size)} · {new Date(b.createdAt).toLocaleString()}</p>
             </div>
+            <Button size="xs" variant="danger" onClick={() => deleteBackup(b.filename)}>Delete</Button>
             <Button size="xs" variant="secondary" onClick={() => adminApi.downloadBackup(b.filename).then(r => {
               const url = URL.createObjectURL(r.data);
               const a = document.createElement('a'); a.href = url; a.download = b.filename; a.click();

@@ -118,6 +118,7 @@ export const adminApi = {
   exportAuditLogs: (params) => api.get('/admin/audit-logs/export', { params, responseType: 'blob' }),
   runBackup: () => api.post('/admin/backup'),
   listBackups: () => api.get('/admin/backups'),
+  deleteBackup: (filename) => api.delete('/admin/backups/' + filename),
   downloadBackup: (filename) => api.get(`/admin/backups/${filename}/download`, { responseType: 'blob' }),
   getSystemHealth: () => api.get('/admin/system-health'),
   getApiKeys: () => api.get('/admin/api-keys'),

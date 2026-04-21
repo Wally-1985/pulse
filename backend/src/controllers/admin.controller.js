@@ -185,6 +185,17 @@ exports.listBackups = async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Failed to list backups' }); }
 };
 
+exports.deleteBackup = async (req, res) => {
+  const safe = path.basename(req.params.filename);
+  const filepath = path.join(BACKUP_DIR, safe);
+  if (!fs_mod.existsSync(filepath)) return res.status(404).json({ error: 'Backup not found' });
+  try {
+    fs_mod.unlinkSync(filepath);
+    await audit({ userId: req.user.id, actionType: 'backup_deleted', newValue: { filename: safe }, req });
+    res.json({ message: 'Backup deleted' });
+  } catch (err) { res.status(500).json({ error: 'Failed to delete backup' }); }
+};
+
 exports.downloadBackup = async (req, res) => {
   const { filename } = req.params;
   const safe = path.basename(filename);
