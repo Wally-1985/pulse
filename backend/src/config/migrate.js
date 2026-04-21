@@ -293,6 +293,11 @@ const migrate = async () => {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     )`);
 
+    // State-based holidays (Section 4.5)
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS state VARCHAR(3) NULL`);
+    await client.query(`ALTER TABLE public_holidays ADD COLUMN IF NOT EXISTS state VARCHAR(3) NULL`);
+    await client.query(`COMMENT ON COLUMN public_holidays.state IS 'NULL = applies to all states. QLD/NSW/VIC/SA/WA/TAS/NT/ACT = state-specific'`);
+
     // Entry drafts (Section 4.2 - Draft/Auto-save)
     await client.query(`CREATE TABLE IF NOT EXISTS entry_drafts (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

@@ -153,13 +153,15 @@ function SmtpTab({ settings, onSave }) {
   );
 }
 
+const AU_STATES = ['', 'QLD', 'NSW', 'VIC', 'SA', 'WA', 'TAS', 'NT', 'ACT'];
+
 function HolidaysTab() {
   const [holidays, setHolidays] = useState([]);
-  const [form, setForm] = useState({ name: '', date: '' });
+  const [form, setForm] = useState({ name: '', date: '', state: '' });
   useEffect(() => { adminApi.getHolidays().then(r => setHolidays(r.data)); }, []);
   const add = async () => {
     if (!form.name || !form.date) return;
-    try { await adminApi.createHoliday(form); setHolidays(h => [...h, { ...form, id: Date.now() }]); setForm({ name: '', date: '' }); toast.success('Holiday added'); }
+    try { await adminApi.createHoliday(form); setHolidays(h => [...h, { ...form, id: Date.now() }]); setForm({ name: '', date: '', state: '' }); toast.success('Holiday added'); }
     catch { toast.error('Failed to add'); }
   };
   const remove = async (id) => {
@@ -169,17 +171,28 @@ function HolidaysTab() {
   return (
     <Card className="p-5">
       <h2 className="text-base font-semibold mb-4">Public Holidays</h2>
-      <p className="text-sm text-[var(--pulse-muted)] mb-4">Days listed here are excluded from missing entry reminders.</p>
+      <p className="text-sm text-[var(--pulse-muted)] mb-4">Days listed here are excluded from missing entry reminders. Leave state blank to apply to all states.</p>
       <div className="flex gap-2 mb-4 flex-wrap">
         <Input placeholder="Holiday name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="flex-1 min-w-32" />
         <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
           className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-2 text-sm text-[var(--pulse-text)]" />
+        <select value={form.state} onChange={e => setForm(f => ({ ...f, state: e.target.value }))}
+          className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-2 text-sm text-[var(--pulse-text)]">
+          <option value="">All States</option>
+          {AU_STATES.filter(s => s).map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
         <Button onClick={add} disabled={!form.name || !form.date}>Add</Button>
       </div>
       <div className="flex flex-col gap-2">
         {holidays.map(h => (
           <div key={h.id} className="flex items-center justify-between py-2 px-3 bg-[var(--pulse-surface-2)] rounded-lg">
-            <div><p className="text-sm font-medium">{h.name}</p><p className="text-xs text-[var(--pulse-muted)]">{h.date}</p></div>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium">{h.name}</p>
+                {h.state ? <span className="text-xs px-1.5 py-0.5 bg-[var(--pulse-accent-soft)] text-[var(--pulse-accent)] rounded">{h.state}</span> : <span className="text-xs text-[var(--pulse-muted)]">All States</span>}
+              </div>
+              <p className="text-xs text-[var(--pulse-muted)]">{h.date}</p>
+            </div>
             <Button size="xs" variant="danger" onClick={() => remove(h.id)}>Remove</Button>
           </div>
         ))}

@@ -141,9 +141,9 @@ function UserModal({ open, onClose, user, teams, onSave }) {
 
   useEffect(() => {
     if (user) {
-      setForm({ email: user.email, firstName: user.first_name, lastName: user.last_name, roles: user.roles || ['member'], teamIds: user.team_ids || [], teamRoles: {}, isActive: user.is_active, sendWelcomeEmail: false });
+      setForm({ email: user.email, firstName: user.first_name, lastName: user.last_name, roles: user.roles || ['member'], teamIds: user.team_ids || [], teamRoles: {}, isActive: user.is_active, state: user.state || '', sendWelcomeEmail: false });
     } else {
-      setForm({ email: '', firstName: '', lastName: '', roles: ['member'], teamIds: [], teamRoles: {}, isActive: true, sendWelcomeEmail: true });
+      setForm({ email: '', firstName: '', lastName: '', roles: ['member'], teamIds: [], teamRoles: {}, isActive: true, state: '', sendWelcomeEmail: true });
     }
   }, [user, open]);
 
@@ -212,6 +212,16 @@ function UserModal({ open, onClose, user, teams, onSave }) {
                 );
               })}
             </div>
+          </div>
+        )}
+        {isEdit && (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium">Australian State</label>
+            <select value={form.state || ''} onChange={e => setForm(f => ({ ...f, state: e.target.value }))}
+              className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-2 text-sm text-[var(--pulse-text)]">
+              <option value="">Not set</option>
+              {['QLD','NSW','VIC','SA','WA','TAS','NT','ACT'].map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
           </div>
         )}
         {isEdit && (

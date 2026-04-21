@@ -91,6 +91,7 @@ function ProfileTab({ profile, onSave }) {
     lastName: profile?.last_name || '',
     timezone: profile?.timezone || 'UTC',
     notificationPreference: profile?.notification_preference || 'both',
+    state: profile?.state || '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -135,6 +136,19 @@ function ProfileTab({ profile, onSave }) {
             <option value="in_app">In-app only</option>
             <option value="none">None</option>
           </select>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium">Australian State</label>
+          <select
+            value={form.state}
+            onChange={set('state')}
+            className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-2 text-sm text-[var(--pulse-text)] focus:outline-none focus:border-[var(--pulse-accent)]"
+          >
+            <option value="">Not set</option>
+            {['QLD','NSW','VIC','SA','WA','TAS','NT','ACT'].map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <p className="text-xs text-[var(--pulse-muted)]">Used to determine which public holidays apply to you.</p>
         </div>
 
         <Button onClick={handleSave} loading={saving} className="w-fit">Save Changes</Button>

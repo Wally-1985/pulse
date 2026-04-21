@@ -20,21 +20,21 @@ const runReminderCheck = async () => {
       return;
     }
 
-    // Check if it's a public holiday or non-working date
-    const holidayCheck = await query(
-      `SELECT 1 FROM public_holidays WHERE date = $1
+    // Check if it's a company-wide public holiday or non-working date
+    const companyHolidayCheck = await query(
+      `SELECT 1 FROM public_holidays WHERE date = $1 AND state IS NULL
        UNION SELECT 1 FROM non_working_dates WHERE date = $1`,
       [dateStr]
     );
-    if (holidayCheck.rows.length) {
-      console.log(`[Reminders] ${dateStr} is a holiday/non-working day — skipping`);
+    if (companyHolidayCheck.rows.length) {
+      console.log(`[Reminders] ${dateStr} is a company-wide holiday/non-working day — skipping`);
       return;
     }
 
     // Find all active members with no submitted entry for yesterday
     // Exclude those on approved leave
     const usersResult = await query(
-      `SELECT u.id, u.email, u.first_name, u.notification_preference
+      `SELECT u.id, u.email, u.first_name, u.notification_preference, u.state
        FROM users u
        JOIN user_roles ur ON ur.user_id = u.id
        JOIN roles r ON r.id = ur.role_id
@@ -56,6 +56,18 @@ const runReminderCheck = async () => {
     let sent = 0;
     for (const user of usersResult.rows) {
       try {
+        // Check if this date is a state-specific holiday for this user's state
+        if (user.state) {
+          const stateHoliday = await query(
+            `SELECT 1 FROM public_holidays WHERE date = $1 AND state = $2`,
+            [dateStr, user.state]
+          );
+          if (stateHoliday.rows.length) {
+            console.log(`[Reminders] ${dateStr} is a ${user.state} holiday — skipping user ${user.id}`);
+            continue;
+          }
+        }
+
         const pref = user.notification_preference || 'both';
 
         if (pref === 'email' || pref === 'both') {

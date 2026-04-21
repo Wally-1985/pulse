@@ -131,7 +131,7 @@ exports.createUser = async (req, res) => {
 // PUT /users/:id
 exports.updateUser = async (req, res) => {
   const { id } = req.params;
-  const { firstName, lastName, isActive, roles, teamIds, teamRoles = {}, timezone, notificationPreference } = req.body;
+  const { firstName, lastName, isActive, roles, teamIds, teamRoles = {}, timezone, notificationPreference, state } = req.body;
   const client = await getClient();
   try {
     await client.query('BEGIN');
@@ -146,9 +146,10 @@ exports.updateUser = async (req, res) => {
         is_active = COALESCE($3, is_active),
         timezone = COALESCE($4, timezone),
         notification_preference = COALESCE($5, notification_preference),
+        state = $6,
         updated_at = NOW()
-       WHERE id = $6`,
-      [firstName, lastName, isActive, timezone, notificationPreference, id]
+       WHERE id = $7`,
+      [firstName, lastName, isActive, timezone, notificationPreference, state || null, id]
     );
 
     if (roles !== undefined) {
@@ -226,7 +227,7 @@ exports.unlockUser = async (req, res) => {
 exports.getProfile = async (req, res) => {
   try {
     const result = await query(
-      `SELECT id, email, first_name, last_name, avatar_url, timezone, notification_preference, mfa_enabled
+      `SELECT id, email, first_name, last_name, avatar_url, timezone, notification_preference, mfa_enabled, state
        FROM users WHERE id = $1`,
       [req.user.id]
     );
@@ -238,7 +239,7 @@ exports.getProfile = async (req, res) => {
 
 // PUT /profile
 exports.updateProfile = async (req, res) => {
-  const { firstName, lastName, timezone, notificationPreference } = req.body;
+  const { firstName, lastName, timezone, notificationPreference, state } = req.body;
   try {
     await query(
       `UPDATE users SET
@@ -246,9 +247,10 @@ exports.updateProfile = async (req, res) => {
         last_name = COALESCE($2, last_name),
         timezone = COALESCE($3, timezone),
         notification_preference = COALESCE($4, notification_preference),
+        state = $5,
         updated_at = NOW()
-       WHERE id = $5`,
-      [firstName, lastName, timezone, notificationPreference, req.user.id]
+       WHERE id = $6`,
+      [firstName, lastName, timezone, notificationPreference, state || null, req.user.id]
     );
     res.json({ message: 'Profile updated' });
   } catch (err) {

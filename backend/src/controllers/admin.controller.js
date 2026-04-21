@@ -37,16 +37,16 @@ exports.updateSettings = async (req, res) => {
 
 exports.getHolidays = async (req, res) => {
   try {
-    const result = await query('SELECT * FROM public_holidays ORDER BY date');
+    const result = await query('SELECT * FROM public_holidays ORDER BY date, name');
     res.json(result.rows);
   } catch (err) { res.status(500).json({ error: 'Failed to fetch holidays' }); }
 };
 
 exports.createHoliday = async (req, res) => {
-  const { name, date } = req.body;
+  const { name, date, state } = req.body;
   try {
     const id = uuidv4();
-    await query('INSERT INTO public_holidays (id, name, date) VALUES ($1, $2, $3)', [id, name, date]);
+    await query('INSERT INTO public_holidays (id, name, date, state) VALUES ($1, $2, $3, $4)', [id, name, date, state || null]);
     res.status(201).json({ id });
   } catch (err) {
     if (err.constraint) return res.status(409).json({ error: 'Date already exists' });
@@ -69,7 +69,7 @@ exports.getNonWorkingDates = async (req, res) => {
 };
 
 exports.createNonWorkingDate = async (req, res) => {
-  const { name, date } = req.body;
+  const { name, date, state } = req.body;
   try {
     const id = uuidv4();
     await query('INSERT INTO non_working_dates (id, name, date) VALUES ($1, $2, $3)', [id, name, date]);
