@@ -296,6 +296,11 @@ const migrate = async () => {
     // State-based holidays (Section 4.5)
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS state VARCHAR(3) NULL`);
     await client.query(`ALTER TABLE public_holidays ADD COLUMN IF NOT EXISTS state VARCHAR(3) NULL`);
+
+    // Staff roster (Task 3 + V2 addition, Section 4.4)
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS roster_start_time TIME DEFAULT NULL`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS roster_finish_time TIME DEFAULT NULL`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS roster_working_days VARCHAR(7) DEFAULT 'MTWTF__'`);
     await client.query(`COMMENT ON COLUMN public_holidays.state IS 'NULL = applies to all states. QLD/NSW/VIC/SA/WA/TAS/NT/ACT = state-specific'`);
 
     // Entry drafts (Section 4.2 - Draft/Auto-save)

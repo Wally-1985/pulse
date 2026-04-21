@@ -73,6 +73,8 @@ export const usersApi = {
   unlockUser: (id) => api.post('/users/' + id + '/unlock'),
   getArchivedUsers: () => api.get('/users/archived'),
   restoreUser: (id) => api.post('/users/' + id + '/restore'),
+  getRoster: (userId) => api.get('/roster/' + userId),
+  updateRoster: (userId, data) => api.put('/roster/' + userId, data),
   getProfile: () => api.get('/profile'),
   updateProfile: (data) => api.put('/profile', data),
 };

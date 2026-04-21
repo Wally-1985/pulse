@@ -57,6 +57,8 @@ router.put('/manager/settings/:userId', authenticate, isManager, notificationsCt
 router.get('/users', authenticate, isAdmin, usersCtrl.getUsers);
 router.get('/users/archived', authenticate, isAdmin, usersCtrl.getArchivedUsers);
 router.post('/users/:id/restore', authenticate, isAdmin, usersCtrl.restoreUser);
+router.get('/roster/:userId', authenticate, isAdmin, usersCtrl.getRoster);
+router.put('/roster/:userId', authenticate, isAdmin, usersCtrl.updateRoster);
 router.get('/users/:id', authenticate, isAdmin, usersCtrl.getUser);
 router.post('/users', authenticate, isAdmin, usersCtrl.createUser);
 router.put('/users/:id', authenticate, isAdmin, usersCtrl.updateUser);

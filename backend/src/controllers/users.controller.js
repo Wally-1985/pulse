@@ -257,3 +257,33 @@ exports.updateProfile = async (req, res) => {
     res.status(500).json({ error: 'Failed to update profile' });
   }
 };
+
+// GET /roster/:userId — get roster settings for a user (admin/manager)
+exports.getRoster = async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT id, first_name, last_name, email, roster_start_time, roster_finish_time, roster_working_days
+       FROM users WHERE id = $1 AND deleted_at IS NULL`,
+      [req.params.userId]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'User not found' });
+    res.json(result.rows[0]);
+  } catch (err) { res.status(500).json({ error: 'Failed to fetch roster' }); }
+};
+
+// PUT /roster/:userId — update roster settings (admin/manager)
+exports.updateRoster = async (req, res) => {
+  const { rosterStartTime, rosterFinishTime, rosterWorkingDays } = req.body;
+  try {
+    await query(
+      `UPDATE users SET
+         roster_start_time = $1,
+         roster_finish_time = $2,
+         roster_working_days = $3,
+         updated_at = NOW()
+       WHERE id = $4`,
+      [rosterStartTime || null, rosterFinishTime || null, rosterWorkingDays || 'MTWTF__', req.params.userId]
+    );
+    res.json({ message: 'Roster updated' });
+  } catch (err) { res.status(500).json({ error: 'Failed to update roster' }); }
+};
