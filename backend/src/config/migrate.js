@@ -279,6 +279,20 @@ const migrate = async () => {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     )`);
 
+    // Ongoing tasks
+    await client.query(`CREATE TABLE IF NOT EXISTS ongoing_tasks (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      detail TEXT NOT NULL,
+      work_type VARCHAR(50) DEFAULT 'other',
+      created_date DATE NOT NULL DEFAULT CURRENT_DATE,
+      source_entry_id UUID REFERENCES daily_entries(id) ON DELETE SET NULL,
+      completed BOOLEAN DEFAULT false,
+      dismissed BOOLEAN DEFAULT false,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+
     // Add zendesk_settings to existing tables if not present
     await client.query(`ALTER TABLE user_zendesk_settings ADD COLUMN IF NOT EXISTS enabled BOOLEAN DEFAULT true`);
 

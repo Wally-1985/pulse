@@ -4,6 +4,8 @@ import { entriesApi } from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import TimeBar, { formatTime, formatPct } from '../../components/TimeBar';
 import ZendeskActivity from '../../components/ZendeskActivity';
+import OngoingTasks from '../../components/OngoingTasks';
+import { tasksApi } from '../../api';
 import { Button, Select, Badge, Spinner } from '../../components/ui';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import toast from 'react-hot-toast';
@@ -319,6 +321,13 @@ export default function EntryPage() {
             }
           } : null}
         />
+        <OngoingTasks
+          readOnly={!canEdit}
+          onAddWorkItem={canEdit ? (item) => {
+            const newItem = { id: ('temp_' + Date.now()), detail: item.detail, workType: item.workType, timeMinutes: 0, isLocked: false, colour: '', completed: false };
+            updateItems(rebalance(assignColours([...workItems, newItem]), totalMinutes));
+          } : null}
+        />
       </div>
     </div>
   );
@@ -389,6 +398,19 @@ function WorkItemRow({ item, index, totalMinutes, readOnly, onUpdate, onRemove, 
             {formatPct(item.timeMinutes, totalMinutes)} · {formatTime(item.timeMinutes)}
           </span>
         </div>
+
+        {/* Completed checkbox */}
+        {!readOnly && (
+          <label className="flex items-center gap-1.5 shrink-0 cursor-pointer" title="Mark as completed">
+            <input
+              type="checkbox"
+              checked={!!item.completed}
+              onChange={(e) => onUpdate('completed', e.target.checked)}
+              className="accent-[var(--pulse-accent)]"
+            />
+            <span className="text-[10px] text-[var(--pulse-muted)]">Done</span>
+          </label>
+        )}
 
         {/* Remove button */}
         {!readOnly && (

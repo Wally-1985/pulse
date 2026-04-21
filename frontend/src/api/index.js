@@ -88,6 +88,15 @@ export const notificationsApi = {
   delete: (id) => api.delete(`/notifications/${id}`),
 };
 
+// Ongoing Tasks
+export const tasksApi = {
+  getOngoing: () => api.get('/tasks/ongoing'),
+  create: (data) => api.post('/tasks/ongoing', data),
+  sync: (data) => api.post('/tasks/ongoing/sync', data),
+  complete: (id) => api.put('/tasks/ongoing/' + id + '/complete'),
+  dismiss: (id) => api.put('/tasks/ongoing/' + id + '/dismiss'),
+};
+
 // Zendesk
 export const zendeskApi = {
   getSettings: () => api.get('/zendesk/settings'),

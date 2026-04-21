@@ -10,6 +10,7 @@ const teamsCtrl = require('../controllers/teams.controller');
 const notificationsCtrl = require('../controllers/notifications.controller');
 const adminCtrl = require('../controllers/admin.controller');
 const zendeskCtrl = require('../controllers/zendesk.controller');
+const tasksCtrl = require('../controllers/tasks.controller');
 
 // ─── AUTH ──────────────────────────────────────────────────────────────────
 router.post('/auth/login', authCtrl.login);
@@ -82,6 +83,13 @@ router.get('/admin/system-health', authenticate, isAdmin, adminCtrl.getSystemHea
 router.get('/admin/api-keys', authenticate, isAdmin, adminCtrl.getApiKeys);
 router.post('/admin/api-keys', authenticate, isAdmin, adminCtrl.createApiKey);
 router.delete('/admin/api-keys/:id', authenticate, isAdmin, adminCtrl.revokeApiKey);
+
+// ─── ONGOING TASKS ────────────────────────────────────────────────────────
+router.get('/tasks/ongoing', authenticate, tasksCtrl.getOngoing);
+router.post('/tasks/ongoing', authenticate, tasksCtrl.createFromWorkItem);
+router.post('/tasks/ongoing/sync', authenticate, tasksCtrl.syncFromEntry);
+router.put('/tasks/ongoing/:id/complete', authenticate, tasksCtrl.complete);
+router.put('/tasks/ongoing/:id/dismiss', authenticate, tasksCtrl.dismiss);
 
 // ─── ZENDESK ───────────────────────────────────────────────────────────────
 router.get('/zendesk/settings', authenticate, zendeskCtrl.getSettings);
