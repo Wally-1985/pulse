@@ -79,6 +79,12 @@ export default function AppLayout() {
           <SidebarLink key={item.to} item={item} onClose={() => setSidebarOpen(false)} />
         ))}
 
+        {/* Group: Team */}
+        <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-[var(--pulse-muted)] mt-3 mb-1">Team</p>
+        {navItems.filter(n => ['/projects'].includes(n.to)).map(item => (
+          <SidebarLink key={item.to} item={item} onClose={() => setSidebarOpen(false)} />
+        ))}
+
         {/* Group: Manager */}
         {isManager && (
           <>
