@@ -259,7 +259,6 @@ function BackupsTab() {
     } catch (e) { toast.error(e.response?.data?.error || 'Backup failed'); }
     finally { setRunning(false); load(); }
   };
-  };
   const formatSize = (bytes) => bytes > 1024*1024 ? (bytes/1024/1024).toFixed(1)+' MB' : (bytes/1024).toFixed(1)+' KB';
   return (
     <Card className="p-5">
