@@ -1,18 +1,19 @@
 ﻿const { query } = require('../config/database');
 const axios = require('axios');
 const https = require('https');
+const tls = require('tls');
 
 // Node 22 + OpenSSL 3.5 rejects X25519MLKEM768 (post-quantum KEM used by Zendesk).
-// Force classic ECDH curves to fix TLS handshake failure.
-const httpsAgent = new https.Agent({
-  minVersion: 'TLSv1.2',
-  ecdhCurve: 'P-256:P-384:P-521:X25519',
-});
+// Use a custom secureContext with explicit ecdhCurve to force classic key exchange.
+function makeAgent() {
+  const ctx = tls.createSecureContext({ ecdhCurve: 'P-256:P-384:P-521:X25519', minVersion: 'TLSv1.2' });
+  return new https.Agent({ secureContext: ctx, minVersion: 'TLSv1.2', ecdhCurve: 'P-256:P-384:P-521:X25519' });
+}
 
 const zendeskRequest = async (subdomain, email, token, path) => {
   const auth = Buffer.from(email + '/token:' + token).toString('base64');
   const response = await axios.get('https://' + subdomain + '.zendesk.com/api/v2' + path, {
-    httpsAgent,
+    httpsAgent: makeAgent(),
     headers: {
       'Authorization': 'Basic ' + auth,
       'Content-Type': 'application/json',
