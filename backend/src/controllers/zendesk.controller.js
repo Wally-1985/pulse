@@ -1,4 +1,4 @@
-﻿const { query } = require('../config/database');
+const { query } = require('../config/database');
 const axios = require('axios');
 const https = require('https');
 const tls = require('tls');
