@@ -4,8 +4,8 @@
   "description": "Pulse Team Performance Tracker - Backend API",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js",
+    "start": "OPENSSL_CONF=./openssl-compat.cnf node src/index.js",
+    "dev": "OPENSSL_CONF=./openssl-compat.cnf nodemon src/index.js",
     "db:migrate": "node src/config/migrate.js",
     "db:seed": "node src/config/seed.js"
   },
