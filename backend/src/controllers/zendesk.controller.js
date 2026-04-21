@@ -35,7 +35,8 @@ exports.getSettings = async (req, res) => {
 };
 
 exports.saveSettings = async (req, res) => {
-  const { subdomain, email, apiToken, enabled } = req.body;
+  const { subdomain: rawSubdomain, email, apiToken, enabled } = req.body;
+  const subdomain = (rawSubdomain || '').replace('.zendesk.com', '').replace('https://', '').replace('http://', '').trim();
   try {
     const sql = [
       'INSERT INTO user_zendesk_settings (user_id, subdomain, email, api_token, enabled, updated_at)',
