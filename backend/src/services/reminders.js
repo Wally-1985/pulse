@@ -8,13 +8,14 @@ const { audit } = require('./audit');
 const runReminderCheck = async () => {
   console.log('[Reminders] Starting reminder check...');
   try {
-    // Get yesterday (the day we're checking for)
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const dateStr = yesterday.toISOString().split('T')[0];
+    // Check TODAY — reminder runs at end-of-day threshold time
+    const today = new Date();
+    const dateStr = today.getFullYear() + '-' +
+      String(today.getMonth() + 1).padStart(2, '0') + '-' +
+      String(today.getDate()).padStart(2, '0');
 
-    // Skip weekends
-    const dayOfWeek = yesterday.getDay();
+    // Skip weekends (basic check — roster logic below handles per-user)
+    const dayOfWeek = today.getDay();
     if (dayOfWeek === 0 || dayOfWeek === 6) {
       console.log('[Reminders] Weekend — skipping');
       return;
@@ -110,18 +111,30 @@ const runReminderCheck = async () => {
   }
 };
 
-// Simple interval-based scheduler (run at 10:00 AM daily)
+// Simple interval-based scheduler — runs daily at the configured alert threshold time
 const startScheduler = () => {
-  const scheduleNext = () => {
+  const scheduleNext = async () => {
+    // Read threshold from system settings (default 17:00)
+    let alertHour = 17, alertMinute = 0;
+    try {
+      const { query } = require('../config/database');
+      const r = await query(`SELECT value FROM system_settings WHERE key = 'missing_entry_alert_time'`);
+      if (r.rows.length && r.rows[0].value) {
+        const parts = r.rows[0].value.split(':');
+        alertHour = parseInt(parts[0]) || 17;
+        alertMinute = parseInt(parts[1]) || 0;
+      }
+    } catch { /* use defaults */ }
+
     const now = new Date();
     const next = new Date();
-    next.setHours(10, 0, 0, 0);
+    next.setHours(alertHour, alertMinute, 0, 0);
     if (next <= now) next.setDate(next.getDate() + 1);
     const msUntilNext = next - now;
     console.log(`[Reminders] Next check scheduled for ${next.toISOString()}`);
     setTimeout(async () => {
       await runReminderCheck();
-      scheduleNext(); // reschedule
+      scheduleNext();
     }, msUntilNext);
   };
   scheduleNext();

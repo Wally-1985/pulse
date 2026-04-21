@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { adminApi } from '../../api';
 import { Card, Button, Input, Badge, Spinner, Modal } from '../../components/ui';
 import toast from 'react-hot-toast';
@@ -69,6 +69,7 @@ function GeneralTab({ settings, onSave }) {
   const [form, setForm] = useState({
     app_name: settings.app_name || 'Pulse',
     default_working_hours: settings.default_working_hours || '9',
+    missing_entry_alert_time: settings.missing_entry_alert_time || '17:00',
     auth_method: settings.auth_method || 'password',
     sso_provider: settings.sso_provider || '',
     sso_client_id: settings.sso_client_id || '',
@@ -86,6 +87,13 @@ function GeneralTab({ settings, onSave }) {
       <div className="flex flex-col gap-4">
         <Input label="App Name" value={form.app_name} onChange={set('app_name')} />
         <Input label="Default Working Hours Per Day" type="number" min="1" max="24" value={form.default_working_hours} onChange={set('default_working_hours')} />
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium">Missing Entry Alert Time</label>
+          <input type="time" value={form.missing_entry_alert_time} onChange={set('missing_entry_alert_time')}
+            className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-2 text-sm text-[var(--pulse-text)] w-40" />
+          <p className="text-xs text-[var(--pulse-muted)]">Daily time to check for missing entries and send alerts to staff who haven&apos;t submitted. Only runs on rostered working days.</p>
+        </div>
 
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">Authentication Method</label>

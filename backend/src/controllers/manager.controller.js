@@ -14,7 +14,8 @@ exports.getDayStatus = async (req, res) => {
     if (!teamIds.length) return res.json([]);
 
     const membersResult = await query(
-      `SELECT DISTINCT ON (u.id) u.id, u.first_name, u.last_name, u.email, u.avatar_url, t.id as team_id, t.name as team_name
+      `SELECT DISTINCT ON (u.id) u.id, u.first_name, u.last_name, u.email, u.avatar_url,
+              u.roster_working_days, t.id as team_id, t.name as team_name
        FROM user_teams ut
        JOIN users u ON u.id = ut.user_id
        JOIN teams t ON t.id = ut.team_id
@@ -42,9 +43,40 @@ exports.getDayStatus = async (req, res) => {
     );
     const onLeave = new Set(leaveResult.rows.map(r => r.user_id));
 
+    // Check holidays for this date
+    const holidayResult = await query(
+      `SELECT state FROM public_holidays WHERE date = $1
+       UNION SELECT NULL FROM non_working_dates WHERE date = $1`,
+      [date]
+    );
+    const holidayStates = new Set(holidayResult.rows.map(r => r.state));
+    const isCompanyHoliday = holidayStates.has(null);
+
+    // Day of week for roster check (0=Sun, 1=Mon...6=Sat)
+    // roster_working_days is MTWTFSS (0=Mon index)
+    const dateObj = new Date(date + 'T12:00:00Z');
+    const jsDay = dateObj.getUTCDay(); // 0=Sun
+    const rosterIndex = jsDay === 0 ? 6 : jsDay - 1; // convert to Mon=0 index
+
     const members = membersResult.rows.map(m => {
       const entry = entriesMap[m.id];
       const isOnLeave = onLeave.has(m.id);
+
+      // Check if rostered off today
+      const workingDays = m.roster_working_days || 'MTWTF__';
+      const isRosteredOff = workingDays[rosterIndex] === '_';
+
+      // Check state-specific holiday
+      const userState = m.state;
+      const isStateHoliday = userState ? holidayStates.has(userState) : false;
+      const isHoliday = isCompanyHoliday || isStateHoliday;
+
+      let status;
+      if (isOnLeave) status = 'leave';
+      else if (isHoliday) status = 'holiday';
+      else if (isRosteredOff) status = 'rostered_off';
+      else status = entry?.status || 'missing';
+
       return {
         userId: m.id,
         firstName: m.first_name,
@@ -53,11 +85,13 @@ exports.getDayStatus = async (req, res) => {
         avatarUrl: m.avatar_url,
         teamId: m.team_id,
         teamName: m.team_name,
-        status: isOnLeave ? 'leave' : (entry?.status || 'missing'),
+        status,
         submittedAt: entry?.submitted_at || null,
         entryId: entry?.entry_id || null,
         workItems: entry?.work_items || [],
         isStillEditable: entry?.status === 'submitted' && new Date() - new Date(entry.submitted_at) < 24 * 60 * 60 * 1000,
+        isRosteredOff,
+        isHoliday,
       };
     });
 
@@ -197,4 +231,14 @@ exports.getMyTeams = async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch teams' });
   }
+};
+
+// GET /manager/submissions/status?date=YYYY-MM-DD
+// Submission status dashboard — Submitted / Not Submitted / Rostered Off / Holiday / Leave
+exports.getSubmissionStatus = async (req, res) => {
+  const date = req.query.date;
+  if (!date) return res.status(400).json({ error: 'date required' });
+  // Reuse getDayStatus logic — it already returns status with roster/holiday awareness
+  req.query = { date };
+  return exports.getDayStatus(req, res);
 };

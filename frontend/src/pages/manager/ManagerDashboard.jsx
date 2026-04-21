@@ -43,7 +43,7 @@ export default function ManagerDashboard() {
   const [weeklySummary, setWeeklySummary] = useState(null);
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('today'); // 'today' | 'week' | 'charts'
+  const [activeTab, setActiveTab] = useState('today'); // 'today' | 'week' | 'charts' | 'zendesk' | 'submissions'
 
   const thisWeek = getWeekStart();
   const lastWeek = getWeekStart(subWeeks(new Date(), 1));
@@ -126,6 +126,7 @@ export default function ManagerDashboard() {
           { key: 'today', label: 'Daily Status' },
           { key: 'week', label: 'This Week' },
           { key: 'charts', label: 'Charts' },
+          { key: 'submissions', label: 'Submission Status' },
           { key: 'zendesk', label: 'Zendesk Activity' },
         ].map(tab => (
           <button
@@ -209,6 +210,10 @@ export default function ManagerDashboard() {
 
       {activeTab === 'zendesk' && (
         <ZendeskTeamTab />
+      )}
+
+      {activeTab === 'submissions' && (
+        <SubmissionStatusTab />
       )}
     </div>
   );
@@ -480,6 +485,84 @@ function ZendeskTeamTab() {
           </Card>
         ))}
       </div>
+    </div>
+  );
+}
+
+function SubmissionStatusTab() {
+  const todayStr = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
+  const [date, setDate] = useState(todayStr());
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = async (d) => {
+    setLoading(true);
+    try {
+      const { data } = await managerApi.getDayStatus(d);
+      setMembers(data);
+    } catch { setMembers([]); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(date); }, [date]);
+
+  const submitted = members.filter(m => m.status === 'submitted');
+  const missing = members.filter(m => m.status === 'missing' || m.status === 'draft');
+  const rosteredOff = members.filter(m => m.status === 'rostered_off' || m.status === 'holiday' || m.status === 'leave');
+
+  const statusConfig = {
+    submitted: { label: 'Submitted', colour: 'bg-green-500/20 text-green-400 border-green-500/30' },
+    draft: { label: 'In Progress', colour: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
+    missing: { label: 'Not Submitted', colour: 'bg-red-500/20 text-red-400 border-red-500/30' },
+    rostered_off: { label: 'Rostered Off', colour: 'bg-gray-500/20 text-gray-400 border-gray-500/30' },
+    holiday: { label: 'Public Holiday', colour: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
+    leave: { label: 'On Leave', colour: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
+  };
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-[var(--pulse-muted)]">Date</label>
+          <input type="date" value={date} onChange={e => setDate(e.target.value)}
+            className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-1.5 text-sm text-[var(--pulse-text)]" />
+        </div>
+        {!loading && (
+          <div className="flex gap-3 text-sm">
+            <span className="text-green-400 font-medium">{submitted.length} submitted</span>
+            <span className="text-red-400 font-medium">{missing.length} not submitted</span>
+            <span className="text-[var(--pulse-muted)]">{rosteredOff.length} off</span>
+          </div>
+        )}
+      </div>
+
+      {loading ? <div className="flex justify-center py-20"><Spinner size="lg" /></div> : (
+        <div className="flex flex-col gap-2">
+          {members.length === 0 && <Card className="p-8 text-center"><p className="text-sm text-[var(--pulse-muted)]">No team members found.</p></Card>}
+          {members.map(m => {
+            const cfg = statusConfig[m.status] || statusConfig.missing;
+            return (
+              <div key={m.userId} className="flex items-center gap-3 px-4 py-3 bg-[var(--pulse-surface)] border border-[var(--pulse-border)] rounded-xl">
+                <Avatar user={{ firstName: m.firstName, lastName: m.lastName }} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{m.firstName} {m.lastName}</p>
+                  <p className="text-xs text-[var(--pulse-muted)]">{m.teamName}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {m.status === 'submitted' && m.submittedAt && (
+                    <span className="text-xs text-[var(--pulse-muted)]">
+                      {new Date(m.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
+                  <span className={'text-xs px-2.5 py-1 rounded-lg border font-medium ' + cfg.colour}>
+                    {cfg.label}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
