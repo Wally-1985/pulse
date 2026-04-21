@@ -4,6 +4,17 @@ import { Card, Badge, Spinner } from './ui';
 
 const STATUS_COLOURS = { new: 'danger', open: 'warning', pending: 'info', hold: 'default', solved: 'success', closed: 'default' };
 
+const ACTIVITY_COLOURS = {
+  'Public Reply': 'success',
+  'Internal Note': 'info',
+  'Reopened': 'warning',
+};
+const getActivityVariant = (a) => {
+  if (ACTIVITY_COLOURS[a]) return ACTIVITY_COLOURS[a];
+  if (a.startsWith('Status')) return 'default';
+  return 'default';
+};
+
 export default function ZendeskActivity({ onCheckedChange, readOnly }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -23,7 +34,6 @@ export default function ZendeskActivity({ onCheckedChange, readOnly }) {
     if (readOnly) return;
     setChecked(prev => {
       const next = { ...prev, [ticketId]: !prev[ticketId] };
-      // Notify parent with list of checked ticket IDs
       const checkedIds = Object.entries(next).filter(([, v]) => v).map(([k]) => k);
       if (onCheckedChange) onCheckedChange(checkedIds, data?.tickets || []);
       return next;
@@ -61,38 +71,43 @@ export default function ZendeskActivity({ onCheckedChange, readOnly }) {
             <p className="text-xs text-[var(--pulse-muted)] mb-2">Check tickets to add a Zendesk work item to your entry.</p>
           )}
           <div className="flex flex-col gap-2">
-            {data.tickets.map(ticket => (
-              <div
-                key={ticket.id}
-                onClick={() => toggle(ticket.id)}
-                className={'p-2.5 rounded-lg border transition-all ' + (readOnly ? 'bg-[var(--pulse-surface-2)] border-transparent' : 'cursor-pointer ' + (checked[ticket.id] ? 'bg-[var(--pulse-accent-soft)] border-[var(--pulse-accent)]/40' : 'bg-[var(--pulse-surface-2)] border-transparent hover:border-[var(--pulse-border)]'))}
-              >
-                <div className="flex items-start gap-2.5">
-                  {!readOnly && (
-                    <input
-                      type="checkbox"
-                      checked={!!checked[ticket.id]}
-                      onChange={() => toggle(ticket.id)}
-                      onClick={e => e.stopPropagation()}
-                      className="mt-0.5 shrink-0 accent-[var(--pulse-accent)]"
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
-                      <a href={ticket.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                        className="text-xs font-mono font-bold text-[var(--pulse-accent)] hover:underline">
-                        #{ticket.id}
-                      </a>
-                      <Badge variant={STATUS_COLOURS[ticket.status] || 'default'}>{ticket.status}</Badge>
-                      <Badge variant={ticket.replyType.includes('Public') ? 'success' : 'info'}>
-                        {ticket.replyType}
-                      </Badge>
+            {data.tickets.map(ticket => {
+              const activities = ticket.replyType ? ticket.replyType.split(' · ') : [];
+              return (
+                <div
+                  key={ticket.id}
+                  onClick={() => toggle(ticket.id)}
+                  className={'p-2.5 rounded-lg border transition-all ' + (readOnly ? 'bg-[var(--pulse-surface-2)] border-transparent' : 'cursor-pointer ' + (checked[ticket.id] ? 'bg-[var(--pulse-accent-soft)] border-[var(--pulse-accent)]/40' : 'bg-[var(--pulse-surface-2)] border-transparent hover:border-[var(--pulse-border)]'))}
+                >
+                  <div className="flex items-start gap-2.5">
+                    {!readOnly && (
+                      <input
+                        type="checkbox"
+                        checked={!!checked[ticket.id]}
+                        onChange={() => toggle(ticket.id)}
+                        onClick={e => e.stopPropagation()}
+                        className="mt-0.5 shrink-0 accent-[var(--pulse-accent)]"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                        <a href={ticket.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                          className="text-xs font-mono font-bold text-[var(--pulse-accent)] hover:underline shrink-0">
+                          #{ticket.id}
+                        </a>
+                        <Badge variant={STATUS_COLOURS[ticket.status] || 'default'}>{ticket.status}</Badge>
+                      </div>
+                      <p className="text-xs text-[var(--pulse-text)] leading-snug break-words mb-1.5">{ticket.subject}</p>
+                      <div className="flex flex-wrap gap-1">
+                        {activities.map((a, i) => (
+                          <Badge key={i} variant={getActivityVariant(a)}>{a}</Badge>
+                        ))}
+                      </div>
                     </div>
-                    <p className="text-xs text-[var(--pulse-text)] leading-snug break-words">{ticket.subject}</p>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}

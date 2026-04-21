@@ -68,25 +68,70 @@ exports.getTodayActivity = async (req, res) => {
     const result = await query('SELECT subdomain, email, api_token, enabled FROM user_zendesk_settings WHERE user_id = $1', [req.user.id]);
     if (!result.rows.length || !result.rows[0].enabled || !result.rows[0].api_token) return res.json({ configured: false, tickets: [] });
     const { subdomain, email, api_token } = result.rows[0];
+
     const meData = await zendeskRequest(subdomain, email, api_token, '/users/me.json');
     const zendeskUserId = meData.user && meData.user.id;
     if (!zendeskUserId) return res.json({ configured: true, tickets: [] });
+
     const todayLocal = new Date();
     const dateStr = todayLocal.getFullYear() + '-' + String(todayLocal.getMonth()+1).padStart(2,'0') + '-' + String(todayLocal.getDate()).padStart(2,'0');
-    const searchQuery = encodeURIComponent('type:ticket commenter:' + email + ' updated>=' + dateStr);
-    const searchData = await zendeskRequest(subdomain, email, api_token, '/search.json?query=' + searchQuery + '&sort_by=updated_at&sort_order=desc&per_page=25');
+
+    // Search for tickets updated today - cast wider net than just commenter
+    const searchQuery = encodeURIComponent('type:ticket updated>=' + dateStr);
+    const searchData = await zendeskRequest(subdomain, email, api_token, '/search.json?query=' + searchQuery + '&sort_by=updated_at&sort_order=desc&per_page=50');
+
     const ticketActivity = [];
+
     for (const ticket of (searchData.results || [])) {
       try {
-        const commentsData = await zendeskRequest(subdomain, email, api_token, '/tickets/' + ticket.id + '/comments.json');
-        const todayComments = (commentsData.comments || []).filter(function(c) { return c.created_at && c.created_at.substring(0,10) === dateStr && c.author_id === zendeskUserId; });
-        if (todayComments.length > 0) {
-          const hasPublic = todayComments.some(function(c) { return c.public === true; });
-          const hasInternal = todayComments.some(function(c) { return c.public === false; });
-          ticketActivity.push({ id: ticket.id, url: 'https://' + subdomain + '.zendesk.com/agent/tickets/' + ticket.id, subject: ticket.subject || 'Ticket #' + ticket.id, status: ticket.status, replyType: [hasPublic ? 'Public Reply' : null, hasInternal ? 'Internal Note' : null].filter(Boolean).join(' + '), commentCount: todayComments.length });
+        // Use audits endpoint to get all events with author info
+        const auditsData = await zendeskRequest(subdomain, email, api_token, '/tickets/' + ticket.id + '/audits.json');
+        const activities = [];
+
+        for (const audit of (auditsData.audits || [])) {
+          // Only care about audits authored by this user today
+          if (audit.author_id !== zendeskUserId) continue;
+          if (!audit.created_at || audit.created_at.substring(0,10) !== dateStr) continue;
+
+          for (const event of (audit.events || [])) {
+            // Internal note
+            if (event.type === 'Comment' && event.public === false) {
+              activities.push('Internal Note');
+            }
+            // Public reply
+            if (event.type === 'Comment' && event.public === true) {
+              activities.push('Public Reply');
+            }
+            // Status change to specific statuses
+            if (event.type === 'Change' && event.field_name === 'status') {
+              const toStatus = event.value;
+              const fromStatus = event.previous_value;
+              if (['new', 'open', 'solved', 'pending'].includes(toStatus)) {
+                activities.push('Status → ' + toStatus.charAt(0).toUpperCase() + toStatus.slice(1));
+              }
+              // Reopened = solved/closed -> open
+              if (['solved', 'closed'].includes(fromStatus) && toStatus === 'open') {
+                activities.push('Reopened');
+              }
+            }
+          }
         }
-      } catch(e) { console.error('Comments error ticket ' + ticket.id + ':', e.message); }
+
+        // Deduplicate activities
+        const uniqueActivities = [...new Set(activities)];
+        if (uniqueActivities.length > 0) {
+          ticketActivity.push({
+            id: ticket.id,
+            url: 'https://' + subdomain + '.zendesk.com/agent/tickets/' + ticket.id,
+            subject: ticket.subject || 'Ticket #' + ticket.id,
+            status: ticket.status,
+            replyType: uniqueActivities.join(' · '),
+            activityCount: uniqueActivities.length,
+          });
+        }
+      } catch(e) { console.error('Audits error ticket ' + ticket.id + ':', e.message); }
     }
+
     res.json({ configured: true, tickets: ticketActivity });
   } catch (err) { console.error('Zendesk getTodayActivity error:', err.message); res.status(500).json({ error: 'Failed to fetch: ' + err.message }); }
 };
