@@ -75,50 +75,52 @@ exports.getTodayActivity = async (req, res) => {
 
     const todayLocal = new Date();
     const dateStr = todayLocal.getFullYear() + '-' + String(todayLocal.getMonth()+1).padStart(2,'0') + '-' + String(todayLocal.getDate()).padStart(2,'0');
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-    // Search for tickets updated today - cast wider net than just commenter
-    const searchQuery = encodeURIComponent('type:ticket updated>=' + dateStr);
-    const searchData = await zendeskRequest(subdomain, email, api_token, '/search.json?query=' + searchQuery + '&sort_by=updated_at&sort_order=desc&per_page=50');
+    // Run targeted searches to find tickets this user specifically touched
+    const searches = [
+      'type:ticket commenter:' + email + ' updated>=' + dateStr,  // tickets they commented on
+      'type:ticket requester:' + email + ' created>=' + dateStr,  // tickets they created
+    ];
+
+    // Collect unique ticket IDs across all searches
+    const ticketMap = {};
+    for (const q of searches) {
+      try {
+        const searchData = await zendeskRequest(subdomain, email, api_token, '/search.json?query=' + encodeURIComponent(q) + '&sort_by=updated_at&sort_order=desc&per_page=50');
+        for (const t of (searchData.results || [])) {
+          ticketMap[t.id] = t;
+        }
+        await sleep(300);
+      } catch(e) { console.error('Search error:', e.message); }
+    }
 
     const ticketActivity = [];
 
-    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-    const tickets = (searchData.results || []).slice(0, 20); // cap at 20 to avoid rate limits
-
-    for (const ticket of tickets) {
+    for (const ticket of Object.values(ticketMap)) {
       try {
-        await sleep(200); // 200ms between requests to avoid 429 rate limiting
-        // Use audits endpoint to get all events with author info
+        await sleep(200);
         const auditsData = await zendeskRequest(subdomain, email, api_token, '/tickets/' + ticket.id + '/audits.json');
         const activities = [];
 
         for (const audit of (auditsData.audits || [])) {
-          // Only care about audits authored by this user today
           if (audit.author_id !== zendeskUserId) continue;
           if (!audit.created_at || audit.created_at.substring(0,10) !== dateStr) continue;
 
-          // Ticket created by this user - first audit of the ticket
-          if (auditsData.audits && auditsData.audits[0] && auditsData.audits[0].id === audit.id) {
+          // Ticket created by this user (first audit)
+          if (auditsData.audits[0] && auditsData.audits[0].id === audit.id) {
             activities.push('Ticket Created');
           }
 
           for (const event of (audit.events || [])) {
-            // Internal note
-            if (event.type === 'Comment' && event.public === false) {
-              activities.push('Internal Note');
-            }
-            // Public reply
-            if (event.type === 'Comment' && event.public === true) {
-              activities.push('Public Reply');
-            }
-            // Status change to specific statuses
+            if (event.type === 'Comment' && event.public === false) activities.push('Internal Note');
+            if (event.type === 'Comment' && event.public === true) activities.push('Public Reply');
             if (event.type === 'Change' && event.field_name === 'status') {
               const toStatus = event.value;
               const fromStatus = event.previous_value;
               if (['new', 'open', 'solved', 'pending'].includes(toStatus)) {
                 activities.push('Status → ' + toStatus.charAt(0).toUpperCase() + toStatus.slice(1));
               }
-              // Reopened = solved/closed -> open
               if (['solved', 'closed'].includes(fromStatus) && toStatus === 'open') {
                 activities.push('Reopened');
               }
@@ -126,7 +128,6 @@ exports.getTodayActivity = async (req, res) => {
           }
         }
 
-        // Deduplicate activities
         const uniqueActivities = [...new Set(activities)];
         if (uniqueActivities.length > 0) {
           ticketActivity.push({
@@ -135,7 +136,6 @@ exports.getTodayActivity = async (req, res) => {
             subject: ticket.subject || 'Ticket #' + ticket.id,
             status: ticket.status,
             replyType: uniqueActivities.join(' · '),
-            activityCount: uniqueActivities.length,
           });
         }
       } catch(e) { console.error('Audits error ticket ' + ticket.id + ':', e.message); }
