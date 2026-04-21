@@ -144,3 +144,137 @@ exports.getTodayActivity = async (req, res) => {
     res.json({ configured: true, tickets: ticketActivity });
   } catch (err) { console.error('Zendesk getTodayActivity error:', err.message); res.status(500).json({ error: 'Failed to fetch: ' + err.message }); }
 };
+
+// GET /manager/zendesk/today - aggregate Zendesk activity for all team members today
+exports.getTeamTodayActivity = async (req, res) => {
+  try {
+    // Get all users in manager's teams
+    const teamUsersResult = await query(
+      `SELECT DISTINCT u.id, u.first_name, u.last_name, u.email as pulse_email
+       FROM manager_teams mt
+       JOIN teams t ON t.id = mt.team_id
+       JOIN user_teams ut ON ut.team_id = t.id
+       JOIN users u ON u.id = ut.user_id
+       WHERE mt.manager_id = $1 AND u.deleted_at IS NULL AND u.is_active = true`,
+      [req.user.id]
+    );
+
+    const teamUsers = teamUsersResult.rows;
+    if (!teamUsers.length) return res.json({ tickets: [], members: [] });
+
+    const todayLocal = new Date();
+    const dateStr = todayLocal.getFullYear() + '-' +
+      String(todayLocal.getMonth() + 1).padStart(2, '0') + '-' +
+      String(todayLocal.getDate()).padStart(2, '0');
+
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    const allTickets = [];
+    const memberIndex = {};
+
+    // Get Zendesk settings for each team member
+    const memberIds = teamUsers.map(u => u.id);
+    const zdSettingsResult = await query(
+      `SELECT user_id, subdomain, email, api_token, enabled
+       FROM user_zendesk_settings
+       WHERE user_id = ANY($1) AND enabled = true AND api_token IS NOT NULL`,
+      [memberIds]
+    );
+
+    const zdByUser = {};
+    for (const s of zdSettingsResult.rows) zdByUser[s.user_id] = s;
+
+    for (const user of teamUsers) {
+      const zd = zdByUser[user.id];
+      if (!zd) continue;
+
+      try {
+        // Get this user's Zendesk ID
+        const meData = await zendeskRequest(zd.subdomain, zd.email, zd.api_token, '/users/me.json');
+        const zendeskUserId = meData.user && meData.user.id;
+        if (!zendeskUserId) continue;
+
+        memberIndex[zendeskUserId] = { id: user.id, name: user.first_name + ' ' + user.last_name, email: user.pulse_email };
+
+        // Search tickets this user commented on or created today
+        const searches = [
+          'type:ticket commenter:' + zd.email + ' updated>=' + dateStr,
+          'type:ticket requester:' + zd.email + ' created>=' + dateStr,
+        ];
+
+        const ticketMap = {};
+        for (const q of searches) {
+          try {
+            await sleep(300);
+            const sd = await zendeskRequest(zd.subdomain, zd.email, zd.api_token,
+              '/search.json?query=' + encodeURIComponent(q) + '&sort_by=updated_at&sort_order=desc&per_page=25');
+            for (const t of (sd.results || [])) ticketMap[t.id] = t;
+          } catch (e) { console.error('Manager ZD search error:', e.message); }
+        }
+
+        for (const ticket of Object.values(ticketMap)) {
+          try {
+            await sleep(200);
+            const auditsData = await zendeskRequest(zd.subdomain, zd.email, zd.api_token,
+              '/tickets/' + ticket.id + '/audits.json');
+            const activities = [];
+
+            for (const audit of (auditsData.audits || [])) {
+              if (audit.author_id !== zendeskUserId) continue;
+              if (!audit.created_at || audit.created_at.substring(0, 10) !== dateStr) continue;
+              if (auditsData.audits[0] && auditsData.audits[0].id === audit.id) activities.push('Ticket Created');
+              for (const event of (audit.events || [])) {
+                if (event.type === 'Comment' && event.public === false) activities.push('Internal Note');
+                if (event.type === 'Comment' && event.public === true) activities.push('Public Reply');
+                if (event.type === 'Change' && event.field_name === 'status') {
+                  const to = event.value; const from = event.previous_value;
+                  if (['new', 'open', 'solved', 'pending'].includes(to))
+                    activities.push('Status → ' + to.charAt(0).toUpperCase() + to.slice(1));
+                  if (['solved', 'closed'].includes(from) && to === 'open') activities.push('Reopened');
+                }
+              }
+            }
+
+            const unique = [...new Set(activities)];
+            if (unique.length > 0) {
+              // Check if ticket already added by another team member
+              const existing = allTickets.find(t => t.id === ticket.id && t.subdomain === zd.subdomain);
+              if (existing) {
+                // Add this member's activity to the existing ticket
+                if (!existing.members.find(m => m.userId === user.id)) {
+                  existing.members.push({ userId: user.id, name: user.first_name + ' ' + user.last_name, activities: unique });
+                }
+              } else {
+                allTickets.push({
+                  id: ticket.id,
+                  subdomain: zd.subdomain,
+                  url: 'https://' + zd.subdomain + '.zendesk.com/agent/tickets/' + ticket.id,
+                  subject: ticket.subject || 'Ticket #' + ticket.id,
+                  status: ticket.status,
+                  priority: ticket.priority,
+                  updatedAt: ticket.updated_at,
+                  assigneeName: ticket.assignee_id ? null : null, // resolved client-side
+                  members: [{ userId: user.id, name: user.first_name + ' ' + user.last_name, activities: unique }],
+                  awaitingResponse: ticket.status === 'open' || ticket.status === 'new',
+                });
+              }
+            }
+          } catch (e) { console.error('Manager ZD audit error ticket ' + ticket.id + ':', e.message); }
+        }
+        await sleep(300);
+      } catch (e) { console.error('Manager ZD user error ' + user.id + ':', e.message); }
+    }
+
+    // Sort by updatedAt desc
+    allTickets.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+    res.json({
+      tickets: allTickets,
+      date: dateStr,
+      memberCount: teamUsers.length,
+      configuredCount: Object.keys(zdByUser).length,
+    });
+  } catch (err) {
+    console.error('getTeamTodayActivity error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch team Zendesk activity: ' + err.message });
+  }
+};

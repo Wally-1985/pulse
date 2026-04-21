@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const { authenticate, isAdmin, isManager } = require('../middleware/auth');
 
@@ -104,5 +104,6 @@ router.get('/zendesk/settings', authenticate, zendeskCtrl.getSettings);
 router.put('/zendesk/settings', authenticate, zendeskCtrl.saveSettings);
 router.get('/zendesk/test', authenticate, zendeskCtrl.testConnection);
 router.get('/zendesk/today', authenticate, zendeskCtrl.getTodayActivity);
+router.get('/manager/zendesk/today', authenticate, isManager, zendeskCtrl.getTeamTodayActivity);
 
 module.exports = router;

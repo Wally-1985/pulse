@@ -1,6 +1,6 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { managerApi } from '../../api';
+import { managerApi, zendeskApi } from '../../api';
 import { format, startOfWeek, subWeeks, addDays, eachDayOfInterval } from 'date-fns';
 import { Card, Badge, Avatar, Spinner, Button, Empty } from '../../components/ui';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -126,6 +126,7 @@ export default function ManagerDashboard() {
           { key: 'today', label: 'Daily Status' },
           { key: 'week', label: 'This Week' },
           { key: 'charts', label: 'Charts' },
+          { key: 'zendesk', label: 'Zendesk Activity' },
         ].map(tab => (
           <button
             key={tab.key}
@@ -204,6 +205,10 @@ export default function ManagerDashboard() {
       {/* CHARTS TAB */}
       {activeTab === 'charts' && (
         <ChartsTab data={chartData} />
+      )}
+
+      {activeTab === 'zendesk' && (
+        <ZendeskTeamTab />
       )}
     </div>
   );
@@ -353,6 +358,128 @@ function ChartsTab({ data }) {
           </ResponsiveContainer>
         )}
       </Card>
+    </div>
+  );
+}
+
+const STATUS_COLOURS = { new: 'bg-red-500/20 text-red-400', open: 'bg-amber-500/20 text-amber-400', pending: 'bg-blue-500/20 text-blue-400', hold: 'bg-gray-500/20 text-gray-400', solved: 'bg-green-500/20 text-green-400', closed: 'bg-gray-500/20 text-gray-400' };
+const PRIORITY_COLOURS = { urgent: 'bg-red-500/20 text-red-400', high: 'bg-orange-500/20 text-orange-400', normal: 'bg-blue-500/20 text-blue-400', low: 'bg-gray-500/20 text-gray-400' };
+const ACTIVITY_COLOURS = { 'Public Reply': 'bg-green-500/20 text-green-400', 'Internal Note': 'bg-blue-500/20 text-blue-400', 'Ticket Created': 'bg-purple-500/20 text-purple-400', 'Reopened': 'bg-amber-500/20 text-amber-400' };
+
+function ZendeskTeamTab() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [filterMember, setFilterMember] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [sortBy, setSortBy] = useState('updated');
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const r = await zendeskApi.getTeamTodayActivity();
+      setData(r.data);
+    } catch (err) {
+      setData({ tickets: [], error: err.response?.data?.error || 'Failed to load' });
+    } finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const allMembers = data ? [...new Map(
+    data.tickets.flatMap(t => t.members.map(m => [m.userId, m.name]))
+  ).entries()].map(([id, name]) => ({ id, name })) : [];
+
+  const filtered = (data?.tickets || []).filter(t => {
+    if (filterMember && !t.members.find(m => m.userId === filterMember)) return false;
+    if (filterStatus && t.status !== filterStatus) return false;
+    return true;
+  }).sort((a, b) => {
+    if (sortBy === 'priority') {
+      const order = { urgent: 0, high: 1, normal: 2, low: 3, null: 4 };
+      return (order[a.priority] ?? 4) - (order[b.priority] ?? 4);
+    }
+    return new Date(b.updatedAt) - new Date(a.updatedAt);
+  });
+
+  if (loading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <p className="text-sm text-[var(--pulse-muted)]">
+            {data?.date && `Today's Zendesk activity — ${data.date}`}
+            {data?.configuredCount < data?.memberCount && ` · ${data.memberCount - data.configuredCount} member(s) without Zendesk configured`}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <select value={filterMember} onChange={e => setFilterMember(e.target.value)}
+            className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-1.5 text-sm text-[var(--pulse-text)]">
+            <option value="">All Members</option>
+            {allMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+            className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-1.5 text-sm text-[var(--pulse-text)]">
+            <option value="">All Statuses</option>
+            {['new', 'open', 'pending', 'hold', 'solved', 'closed'].map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+            className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-1.5 text-sm text-[var(--pulse-text)]">
+            <option value="updated">Sort: Last Updated</option>
+            <option value="priority">Sort: Priority</option>
+          </select>
+          <button onClick={load} className="text-[var(--pulse-muted)] hover:text-[var(--pulse-text)] transition-colors p-1" title="Refresh">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+          </button>
+        </div>
+      </div>
+
+      {data?.error && <p className="text-sm text-red-400">{data.error}</p>}
+
+      {filtered.length === 0 && !data?.error && (
+        <Card className="p-8 text-center">
+          <p className="text-sm text-[var(--pulse-muted)]">No Zendesk activity found for today.</p>
+          <p className="text-xs text-[var(--pulse-muted)] mt-1">Team members need Zendesk configured in their Profile settings.</p>
+        </Card>
+      )}
+
+      <div className="flex flex-col gap-3">
+        {filtered.map(ticket => (
+          <Card key={ticket.id + ticket.subdomain} className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <a href={ticket.url} target="_blank" rel="noopener noreferrer"
+                    className="text-sm font-mono font-bold text-[var(--pulse-accent)] hover:underline shrink-0">
+                    #{ticket.id}
+                  </a>
+                  <span className={'text-xs px-1.5 py-0.5 rounded-md font-medium ' + (STATUS_COLOURS[ticket.status] || 'bg-gray-500/20 text-gray-400')}>{ticket.status}</span>
+                  {ticket.priority && <span className={'text-xs px-1.5 py-0.5 rounded-md font-medium ' + (PRIORITY_COLOURS[ticket.priority] || '')}>{ticket.priority}</span>}
+                  {ticket.awaitingResponse && <span className="text-xs px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-400 font-medium">Awaiting Response</span>}
+                  <span className="text-xs text-[var(--pulse-muted)] ml-auto">{ticket.updatedAt ? new Date(ticket.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                </div>
+                <p className="text-sm text-[var(--pulse-text)] mb-2">{ticket.subject}</p>
+                <div className="flex flex-col gap-1.5">
+                  {ticket.members.map(m => (
+                    <div key={m.userId} className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-medium text-[var(--pulse-muted)] shrink-0">{m.name}</span>
+                      <div className="flex gap-1 flex-wrap">
+                        {m.activities.map((a, i) => (
+                          <span key={i} className={'text-xs px-1.5 py-0.5 rounded-md ' + (ACTIVITY_COLOURS[a] || (a.startsWith('Status') ? 'bg-gray-500/20 text-gray-400' : 'bg-gray-500/20 text-gray-400'))}>{a}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <a href={ticket.url} target="_blank" rel="noopener noreferrer"
+                className="shrink-0 text-xs px-2 py-1 rounded-lg bg-[var(--pulse-surface-2)] text-[var(--pulse-muted)] hover:text-[var(--pulse-accent)] hover:bg-[var(--pulse-accent-soft)] transition-colors">
+                Open ↗
+              </a>
+            </div>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

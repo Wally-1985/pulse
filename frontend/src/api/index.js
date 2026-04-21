@@ -1,4 +1,4 @@
-﻿import axios from 'axios';
+import axios from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
@@ -110,6 +110,7 @@ export const zendeskApi = {
   saveSettings: (data) => api.put('/zendesk/settings', data),
   testConnection: () => api.get('/zendesk/test'),
   getTodayActivity: () => api.get('/zendesk/today'),
+  getTeamTodayActivity: () => api.get('/manager/zendesk/today'),
 };
 
 // Admin
