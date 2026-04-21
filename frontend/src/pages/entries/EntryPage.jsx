@@ -61,6 +61,7 @@ export default function EntryPage() {
   const [saveStatus, setSaveStatus] = useState(''); // 'saving' | 'saved' | ''
   const [submitting, setSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [draftPrompt, setDraftPrompt] = useState(null); // { draft: { workItems }, updatedAt }
   const saveTimer = useRef(null);
   const dragItem = useRef(null);
   const dragOverItem = useRef(null);
