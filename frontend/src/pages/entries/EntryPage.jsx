@@ -1,6 +1,7 @@
-﻿import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { entriesApi } from '../../api';
+import { projectsApi } from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import TimeBar, { formatTime, formatPct } from '../../components/TimeBar';
 import ZendeskActivity from '../../components/ZendeskActivity';
@@ -62,6 +63,7 @@ export default function EntryPage() {
   const [submitting, setSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [draftPrompt, setDraftPrompt] = useState(null); // { draft: { workItems }, updatedAt }
+  const [projects, setProjects] = useState([]);
   const saveTimer = useRef(null);
   const dragItem = useRef(null);
   const dragOverItem = useRef(null);
@@ -95,6 +97,13 @@ export default function EntryPage() {
     load();
     setSearchParams({ date }, { replace: true });
   }, [date]);
+
+  // Load active projects for work item linking
+  useEffect(() => {
+    if (!viewUserId) {
+      projectsApi.getProjects().then(r => setProjects((r.data || []).filter(p => p.status !== 'completed'))).catch(() => {});
+    }
+  }, []);
 
   // Auto-save on change
   const autoSave = useCallback((items) => {
@@ -284,6 +293,7 @@ export default function EntryPage() {
                   index={idx}
                   totalMinutes={totalMinutes}
                   readOnly={!canEdit}
+                  projects={projects}
                   onUpdate={(field, val) => updateItem(item.id, field, val)}
                   onRemove={() => removeItem(item.id)}
                   onDragStart={() => { dragItem.current = idx; }}
@@ -359,7 +369,7 @@ export default function EntryPage() {
 }
 
 
-function WorkItemRow({ item, index, totalMinutes, readOnly, onUpdate, onRemove, onDragStart, onDragEnter, onDragEnd }) {
+function WorkItemRow({ item, index, totalMinutes, readOnly, projects = [], onUpdate, onRemove, onDragStart, onDragEnter, onDragEnd }) {
   const [isDragOver, setIsDragOver] = useState(false);
 
   return (
@@ -423,6 +433,24 @@ function WorkItemRow({ item, index, totalMinutes, readOnly, onUpdate, onRemove, 
             {formatPct(item.timeMinutes, totalMinutes)} · {formatTime(item.timeMinutes)}
           </span>
         </div>
+
+          {/* Project link */}
+          {!readOnly && projects.length > 0 && (
+            <select
+              value={item.projectId || ''}
+              onChange={(e) => onUpdate('projectId', e.target.value || null)}
+              className="text-xs bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-md px-2 py-1 text-[var(--pulse-muted)] focus:outline-none focus:border-[var(--pulse-accent)] cursor-pointer max-w-32"
+              title="Link to project"
+            >
+              <option value="">No project</option>
+              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          )}
+          {readOnly && item.projectId && projects.length > 0 && (
+            <span className="text-xs text-[var(--pulse-accent)] truncate max-w-32">
+              {projects.find(p => p.id === item.projectId)?.name || ''}
+            </span>
+          )}
 
         {/* Completed checkbox */}
         {!readOnly && (

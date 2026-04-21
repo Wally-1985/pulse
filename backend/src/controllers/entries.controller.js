@@ -127,8 +127,8 @@ exports.upsertEntry = async (req, res) => {
     for (let i = 0; i < (workItems || []).length; i++) {
       const item = workItems[i];
       const result = await client.query(
-        `INSERT INTO work_items (entry_id, detail, work_type, time_minutes, is_locked, sort_order, colour)
-         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+        `INSERT INTO work_items (entry_id, detail, work_type, time_minutes, is_locked, sort_order, colour, project_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
         [
           entry.id,
           item.detail || '',
@@ -137,8 +137,16 @@ exports.upsertEntry = async (req, res) => {
           item.isLocked || false,
           i,
           COLOURS[i % COLOURS.length],
+          item.projectId || null,
         ]
       );
+      // Auto-update project last_activity_at when a work item is linked
+      if (item.projectId) {
+        await client.query(
+          `UPDATE projects SET last_activity_at = NOW(), updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`,
+          [item.projectId]
+        );
+      }
       insertedItems.push(result.rows[0]);
     }
 

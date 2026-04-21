@@ -9,6 +9,8 @@ import EntriesListPage from './pages/entries/EntriesListPage';
 import EntryPage from './pages/entries/EntryPage';
 import ManagerDashboard from './pages/manager/ManagerDashboard';
 import AdminPage from './pages/admin/AdminPage';
+import ProjectsPage from './pages/projects/ProjectsPage';
+import ProjectDetailPage from './pages/projects/ProjectDetailPage';
 import UsersPage from './pages/admin/UsersPage';
 import TeamsPage from './pages/admin/TeamsPage';
 import ProfilePage from './pages/profile/ProfilePage';
@@ -65,6 +67,8 @@ function AppRoutes() {
         <Route path="/admin"        element={<ProtectedRoute requiredRole="admin"><AdminPage /></ProtectedRoute>} />
         <Route path="/admin/users"  element={<ProtectedRoute requiredRole="admin"><UsersPage /></ProtectedRoute>} />
         <Route path="/admin/teams"  element={<ProtectedRoute requiredRole="admin"><TeamsPage /></ProtectedRoute>} />
+        <Route path="/projects"     element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
+        <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetailPage /></ProtectedRoute>} />
       </Route>
 
       <Route path="*" element={<Navigate to={defaultRedirect} replace />} />

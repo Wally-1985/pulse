@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { managerApi, zendeskApi } from '../../api';
+import { managerApi, zendeskApi, projectsApi } from '../../api';
 import { format, startOfWeek, subWeeks, addDays, eachDayOfInterval } from 'date-fns';
 import { Card, Badge, Avatar, Spinner, Button, Empty } from '../../components/ui';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -126,6 +126,7 @@ export default function ManagerDashboard() {
           { key: 'today', label: 'Daily Status' },
           { key: 'week', label: 'This Week' },
           { key: 'charts', label: 'Charts' },
+          { key: 'projects', label: 'Projects' },
           { key: 'submissions', label: 'Submission Status' },
           { key: 'zendesk', label: 'Zendesk Activity' },
         ].map(tab => (
@@ -214,6 +215,10 @@ export default function ManagerDashboard() {
 
       {activeTab === 'submissions' && (
         <SubmissionStatusTab />
+      )}
+
+      {activeTab === 'projects' && (
+        <ProjectsManagerTab />
       )}
     </div>
   );
@@ -563,6 +568,96 @@ function SubmissionStatusTab() {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+
+const STATUS_LABELS = { high_priority_not_started: 'High Priority', not_started: 'Not Started', in_progress: 'In Progress', on_hold: 'On Hold', completed: 'Completed' };
+const STATUS_BADGE_COLOURS = { high_priority_not_started: 'danger', not_started: 'default', in_progress: 'accent', on_hold: 'warning', completed: 'success' };
+const HEALTH_DOT = { green: 'bg-green-500', amber: 'bg-amber-500', red: 'bg-red-500', completed: 'bg-gray-400' };
+
+function ProjectsManagerTab() {
+  const navigate = useNavigate();
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState('active');
+
+  useEffect(() => {
+    projectsApi.getProjects()
+      .then(r => setProjects(r.data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered = projects.filter(p => {
+    if (filterStatus === 'active') return ['in_progress', 'high_priority_not_started', 'not_started'].includes(p.status);
+    if (filterStatus === 'all') return true;
+    return p.status === filterStatus;
+  });
+
+  const atRisk = projects.filter(p => p.health === 'red' && p.status !== 'completed').length;
+  const stalled = projects.filter(p => p.health === 'amber' && p.status !== 'completed').length;
+
+  if (loading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3 text-sm">
+          {atRisk > 0 && <span className="text-red-400 font-medium">● {atRisk} at risk</span>}
+          {stalled > 0 && <span className="text-amber-400 font-medium">● {stalled} stalled</span>}
+          {atRisk === 0 && stalled === 0 && <span className="text-green-400 font-medium">● All projects healthy</span>}
+        </div>
+        <div className="flex items-center gap-2">
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+            className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-1.5 text-sm text-[var(--pulse-text)]">
+            <option value="active">Active</option>
+            <option value="all">All</option>
+            <option value="in_progress">In Progress</option>
+            <option value="on_hold">On Hold</option>
+            <option value="completed">Completed</option>
+          </select>
+          <Button size="sm" onClick={() => navigate('/projects')}>View All Projects</Button>
+        </div>
+      </div>
+
+      {filtered.length === 0 && (
+        <Card className="p-8 text-center"><p className="text-sm text-[var(--pulse-muted)]">No projects found.</p></Card>
+      )}
+
+      <div className="flex flex-col gap-2">
+        {filtered.map(project => (
+          <Card key={project.id} className="p-4 cursor-pointer hover:border-[var(--pulse-accent)]/40 transition-colors"
+            onClick={() => navigate('/projects/' + project.id)}>
+            <div className="flex items-start gap-3">
+              <div className={'w-2 h-2 rounded-full mt-1.5 shrink-0 ' + (HEALTH_DOT[project.health] || 'bg-gray-400')} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <p className="text-sm font-semibold">{project.name}</p>
+                  <Badge variant={STATUS_BADGE_COLOURS[project.status] || 'default'}>
+                    {STATUS_LABELS[project.status] || project.status}
+                  </Badge>
+                  {project.status === 'in_progress' && project.priority && (
+                    <Badge variant="warning">P{project.priority}</Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-4 text-xs text-[var(--pulse-muted)]">
+                  {parseInt(project.task_count) > 0 && <span>{project.completed_task_count}/{project.task_count} tasks</span>}
+                  {project.last_activity_at && <span>Last activity {new Date(project.last_activity_at).toLocaleDateString()}</span>}
+                  {!project.last_activity_at && <span className="text-red-400">No activity recorded</span>}
+                  {(project.assigned_user_names || []).filter(Boolean).length > 0 && (
+                    <span>{project.assigned_user_names.filter(Boolean).join(', ')}</span>
+                  )}
+                </div>
+              </div>
+              <svg className="w-4 h-4 text-[var(--pulse-muted)] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

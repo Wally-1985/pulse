@@ -372,6 +372,58 @@ const migrate = async () => {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token_hash)`);
 
+    // ─── PROJECT MANAGEMENT (Tasks 12-14) ───────────────────────────────────
+    await client.query(`CREATE TABLE IF NOT EXISTS projects (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      name VARCHAR(255) NOT NULL,
+      description TEXT,
+      status VARCHAR(50) NOT NULL DEFAULT 'not_started',
+      priority INTEGER CHECK (priority BETWEEN 1 AND 4),
+      last_activity_at TIMESTAMPTZ,
+      created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      deleted_at TIMESTAMPTZ
+    )`);
+
+    await client.query(`CREATE TABLE IF NOT EXISTS project_user_assignments (
+      project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      assigned_at TIMESTAMPTZ DEFAULT NOW(),
+      assigned_by UUID REFERENCES users(id) ON DELETE SET NULL,
+      PRIMARY KEY (project_id, user_id)
+    )`);
+
+    await client.query(`CREATE TABLE IF NOT EXISTS project_tasks (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      title VARCHAR(255) NOT NULL,
+      description TEXT,
+      status VARCHAR(20) NOT NULL DEFAULT 'not_started',
+      due_date DATE,
+      sort_order INTEGER DEFAULT 0,
+      created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+      updated_by UUID REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      deleted_at TIMESTAMPTZ
+    )`);
+
+    await client.query(`CREATE TABLE IF NOT EXISTS project_notes (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      note_text TEXT NOT NULL,
+      created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+
+    await client.query(`ALTER TABLE work_items ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES projects(id) ON DELETE SET NULL`);
+
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status) WHERE deleted_at IS NULL`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_project_tasks_project ON project_tasks(project_id) WHERE deleted_at IS NULL`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_project_notes_project ON project_notes(project_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_work_items_project ON work_items(project_id) WHERE project_id IS NOT NULL`);
+
     await client.query('COMMIT');
     console.log('✅ Migration complete');
   } catch (err) {

@@ -141,3 +141,16 @@ export const aiApi = {
   updatePromptTemplate: (id, data) => api.put('/ai/prompt-templates/' + id, data),
   getJobs: () => api.get('/ai/jobs'),
 };
+
+export const projectsApi = {
+  getProjects: () => api.get('/projects'),
+  getProject: (id) => api.get('/projects/' + id),
+  createProject: (data) => api.post('/projects', data),
+  updateProject: (id, data) => api.put('/projects/' + id, data),
+  deleteProject: (id) => api.delete('/projects/' + id),
+  createTask: (projectId, data) => api.post('/projects/' + projectId + '/tasks', data),
+  updateTask: (projectId, taskId, data) => api.put('/projects/' + projectId + '/tasks/' + taskId, data),
+  deleteTask: (projectId, taskId) => api.delete('/projects/' + projectId + '/tasks/' + taskId),
+  createNote: (projectId, data) => api.post('/projects/' + projectId + '/notes', data),
+  deleteNote: (projectId, noteId) => api.delete('/projects/' + projectId + '/notes/' + noteId),
+};

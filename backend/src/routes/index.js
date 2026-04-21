@@ -11,6 +11,7 @@ const notificationsCtrl = require('../controllers/notifications.controller');
 const adminCtrl = require('../controllers/admin.controller');
 const zendeskCtrl = require('../controllers/zendesk.controller');
 const aiCtrl = require('../controllers/ai.controller');
+const projectsCtrl = require('../controllers/projects.controller');
 const tasksCtrl = require('../controllers/tasks.controller');
 
 // ─── AUTH ──────────────────────────────────────────────────────────────────
@@ -115,6 +116,18 @@ router.get('/ai/prompt-templates', authenticate, isAdmin, aiCtrl.getPromptTempla
 router.post('/ai/prompt-templates', authenticate, isAdmin, aiCtrl.createPromptTemplate);
 router.put('/ai/prompt-templates/:id', authenticate, isAdmin, aiCtrl.updatePromptTemplate);
 router.get('/ai/jobs', authenticate, isAdmin, aiCtrl.getJobs);
+
+// ─── PROJECTS ──────────────────────────────────────────────────────────────
+router.get('/projects', authenticate, projectsCtrl.getProjects);
+router.post('/projects', authenticate, projectsCtrl.createProject);
+router.get('/projects/:id', authenticate, projectsCtrl.getProject);
+router.put('/projects/:id', authenticate, projectsCtrl.updateProject);
+router.delete('/projects/:id', authenticate, projectsCtrl.deleteProject);
+router.post('/projects/:id/tasks', authenticate, projectsCtrl.createTask);
+router.put('/projects/:id/tasks/:taskId', authenticate, projectsCtrl.updateTask);
+router.delete('/projects/:id/tasks/:taskId', authenticate, projectsCtrl.deleteTask);
+router.post('/projects/:id/notes', authenticate, projectsCtrl.createNote);
+router.delete('/projects/:id/notes/:noteId', authenticate, projectsCtrl.deleteNote);
 router.get('/manager/submissions/status', authenticate, isManager, managerCtrl.getSubmissionStatus);
 
 module.exports = router;

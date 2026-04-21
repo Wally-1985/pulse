@@ -1,16 +1,17 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { notificationsApi } from '../../api';
 import { Avatar, Badge } from '../ui';
 
 const NAV = [
-  { to: '/dashboard', label: 'Home',         icon: '⚡', roles: ['member','manager','admin'] },
-  { to: '/entries',   label: 'My Entries',   icon: '📋', roles: ['member','manager','admin'] },
-  { to: '/manager',   label: 'Team Dashboard',icon: '👥', roles: ['manager','admin'] },
-  { to: '/admin',     label: 'Settings',     icon: '⚙️', roles: ['admin'] },
-  { to: '/admin/users', label: 'Users',      icon: '👤', roles: ['admin'] },
-  { to: '/admin/teams', label: 'Teams',      icon: '🏷️', roles: ['admin'] },
+  { to: '/dashboard', label: 'Home',           icon: '⚡', roles: ['member','manager','admin'] },
+  { to: '/entries',   label: 'My Entries',     icon: '📋', roles: ['member','manager','admin'] },
+  { to: '/projects',  label: 'Projects',       icon: '🗂️', roles: ['member','manager','admin'] },
+  { to: '/manager',   label: 'Team Dashboard', icon: '👥', roles: ['manager','admin'] },
+  { to: '/admin',     label: 'Settings',       icon: '⚙️', roles: ['admin'] },
+  { to: '/admin/users', label: 'Users',        icon: '👤', roles: ['admin'] },
+  { to: '/admin/teams', label: 'Teams',        icon: '🏷️', roles: ['admin'] },
 ];
 
 export default function AppLayout() {
