@@ -1,4 +1,4 @@
-const bcrypt = require('bcryptjs');
+﻿const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { query, getClient } = require('../config/database');
 const { audit } = require('../services/audit');
@@ -28,6 +28,25 @@ exports.getUsers = async (req, res) => {
     console.error('getUsers error:', err);
     res.status(500).json({ error: 'Failed to fetch users' });
   }
+};
+
+// GET /users/archived
+exports.getArchivedUsers = async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT u.id, u.email, u.first_name, u.last_name, u.avatar_url, u.deleted_at,
+              array_agg(DISTINCT r.name) FILTER (WHERE r.name IS NOT NULL) as roles,
+              array_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL) as teams
+       FROM users u
+       LEFT JOIN user_roles ur ON ur.user_id = u.id
+       LEFT JOIN roles r ON r.id = ur.role_id
+       LEFT JOIN user_teams ut ON ut.user_id = u.id
+       LEFT JOIN teams t ON t.id = ut.team_id
+       WHERE u.deleted_at IS NOT NULL
+       GROUP BY u.id
+       ORDER BY u.deleted_at DESC`);
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ error: 'Failed to fetch archived users' }); }
 };
 
 // GET /users/:id
@@ -181,6 +200,15 @@ exports.deleteUser = async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete user' });
   }
+};
+
+// POST /users/:id/restore
+exports.restoreUser = async (req, res) => {
+  try {
+    await query(`UPDATE users SET deleted_at = NULL, is_active = true WHERE id = $1`, [req.params.id]);
+    await audit({ userId: req.user.id, actionType: 'user_restored', entityType: 'user', entityId: req.params.id, req });
+    res.json({ message: 'User restored' });
+  } catch (err) { res.status(500).json({ error: 'Failed to restore user' }); }
 };
 
 // POST /users/:id/unlock
