@@ -1,4 +1,4 @@
-const { query } = require('../config/database');
+﻿const { query } = require('../config/database');
 const { audit } = require('../services/audit');
 const { resetTransporter } = require('../services/email');
 const { v4: uuidv4 } = require('uuid');
@@ -160,9 +160,10 @@ exports.runBackup = async (req, res) => {
     const safeSettings = settings.rows.filter(r => !r.key.includes('pass'));
     fs_mod.writeFileSync(path.join(backupDir, 'settings.json'), JSON.stringify(safeSettings, null, 2));
 
-    // 5. Zip everything
-    const zipFile = path.join(BACKUP_DIR, backupName + '.zip');
-    execSync('cd "' + BACKUP_DIR + '" && zip -r "' + zipFile + '" "' + backupName + '" && rm -rf "' + backupDir + '"');
+    // 5. Zip everything - use relative path inside BACKUP_DIR
+    const zipFilename = backupName + '.zip';
+    const zipFile = path.join(BACKUP_DIR, zipFilename);
+    execSync('cd "' + BACKUP_DIR + '" && zip -r "' + zipFilename + '" "' + backupName + '" && rm -rf "' + backupName + '"', { cwd: BACKUP_DIR });
 
     const stat = fs_mod.statSync(zipFile);
     await audit({ userId: req.user.id, actionType: 'backup_created', newValue: { filename: backupName + '.zip' }, req });
