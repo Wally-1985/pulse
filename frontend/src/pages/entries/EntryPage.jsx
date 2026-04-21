@@ -227,6 +227,14 @@ export default function EntryPage() {
           <div className="flex justify-center py-20"><Spinner size="lg" /></div>
         ) : (
           <>
+            {/* Add buttons - above list per V2 spec */}
+            {canEdit && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                <Button variant="secondary" size="sm" onClick={addItem}>+ Add Item</Button>
+                <Button variant="secondary" size="sm" onClick={addLunch}>+ Add 1h Lunch</Button>
+            </div>
+            )}
+
             {/* Work items */}
             <div className="flex flex-col gap-3 mb-6">
               {workItems.map((item, idx) => (
@@ -264,23 +272,15 @@ export default function EntryPage() {
               </div>
             )}
 
-            {/* Add buttons */}
-            {canEdit && (
-              <div className="flex flex-wrap gap-2 mb-6">
-                <Button variant="secondary" size="sm" onClick={addItem}>+ Add Work Item</Button>
-                <Button variant="secondary" size="sm" onClick={addLunch}>+ Add 1h Lunch</Button>
-              </div>
-            )}
-
             {/* Submit */}
             {canSubmit && !isSubmitted && (
               <div className="flex justify-end">
-                <Button onClick={handleSubmit} loading={submitting} size="lg">Submit Entry</Button>
+                <Button onClick={handleSubmit} loading={submitting} size="lg">Submit / Resubmit Entry</Button>
               </div>
             )}
             {isSubmitted && isEditing && (
               <div className="flex justify-end">
-                <Button onClick={handleSubmit} loading={submitting} size="lg">Re-submit Entry</Button>
+                <Button onClick={handleSubmit} loading={submitting} size="lg">Submit / Resubmit Entry</Button>
               </div>
             )}
             {isSubmitted && !isEditing && (
