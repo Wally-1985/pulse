@@ -82,8 +82,12 @@ exports.getTodayActivity = async (req, res) => {
 
     const ticketActivity = [];
 
-    for (const ticket of (searchData.results || [])) {
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    const tickets = (searchData.results || []).slice(0, 20); // cap at 20 to avoid rate limits
+
+    for (const ticket of tickets) {
       try {
+        await sleep(200); // 200ms between requests to avoid 429 rate limiting
         // Use audits endpoint to get all events with author info
         const auditsData = await zendeskRequest(subdomain, email, api_token, '/tickets/' + ticket.id + '/audits.json');
         const activities = [];
