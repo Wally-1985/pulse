@@ -93,6 +93,11 @@ exports.getTodayActivity = async (req, res) => {
           if (audit.author_id !== zendeskUserId) continue;
           if (!audit.created_at || audit.created_at.substring(0,10) !== dateStr) continue;
 
+          // Ticket created by this user - first audit of the ticket
+          if (auditsData.audits && auditsData.audits[0] && auditsData.audits[0].id === audit.id) {
+            activities.push('Ticket Created');
+          }
+
           for (const event of (audit.events || [])) {
             // Internal note
             if (event.type === 'Comment' && event.public === false) {

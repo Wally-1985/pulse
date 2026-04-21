@@ -8,6 +8,7 @@ const ACTIVITY_COLOURS = {
   'Public Reply': 'success',
   'Internal Note': 'info',
   'Reopened': 'warning',
+  'Ticket Created': 'accent',
 };
 const getActivityVariant = (a) => {
   if (ACTIVITY_COLOURS[a]) return ACTIVITY_COLOURS[a];
