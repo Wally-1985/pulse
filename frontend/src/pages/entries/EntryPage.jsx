@@ -227,13 +227,31 @@ export default function EntryPage() {
           <div className="flex justify-center py-20"><Spinner size="lg" /></div>
         ) : (
           <>
-            {/* Add buttons - above list per V2 spec */}
-            {canEdit && (
-              <div className="flex flex-wrap gap-2 mb-4">
-                <Button variant="secondary" size="sm" onClick={addItem}>+ Add Item</Button>
-                <Button variant="secondary" size="sm" onClick={addLunch}>+ Add 1h Lunch</Button>
+            {/* Toolbar: add buttons left, submit right */}
+            <div className="flex items-center justify-between mb-4 gap-2">
+              <div className="flex gap-2">
+                {canEdit && (
+                  <>
+                    <Button variant="secondary" size="sm" onClick={addItem}>+ Add Item</Button>
+                    <Button variant="secondary" size="sm" onClick={addLunch}>+ Add 1h Lunch</Button>
+                  </>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {isSubmitted && isEditing && (
+                  <Button variant="secondary" size="sm" onClick={() => setIsEditing(false)}>Cancel</Button>
+                )}
+                {canSubmit && !isSubmitted && (
+                  <Button onClick={handleSubmit} loading={submitting}>Submit Entry</Button>
+                )}
+                {isSubmitted && isEditing && (
+                  <Button onClick={handleSubmit} loading={submitting}>Resubmit Entry</Button>
+                )}
+                {isSubmitted && !isEditing && (
+                  <p className="text-xs text-[var(--pulse-muted)]">Click Edit Entry to make changes</p>
+                )}
+              </div>
             </div>
-            )}
 
             {/* Work items */}
             <div className="flex flex-col gap-3 mb-6">
@@ -272,22 +290,7 @@ export default function EntryPage() {
               </div>
             )}
 
-            {/* Submit */}
-            {canSubmit && !isSubmitted && (
-              <div className="flex justify-end">
-                <Button onClick={handleSubmit} loading={submitting} size="lg">Submit / Resubmit Entry</Button>
-              </div>
-            )}
-            {isSubmitted && isEditing && (
-              <div className="flex justify-end">
-                <Button onClick={handleSubmit} loading={submitting} size="lg">Submit / Resubmit Entry</Button>
-              </div>
-            )}
-            {isSubmitted && !isEditing && (
-              <div className="text-center py-2">
-                <p className="text-xs text-[var(--pulse-muted)]">Click Edit Entry to make changes</p>
-              </div>
-            )}
+
           </>
         )}
       </div>
