@@ -9,16 +9,18 @@ exports.getUsers = async (req, res) => {
   try {
     const result = await query(
       `SELECT u.id, u.email, u.first_name, u.last_name, u.avatar_url, u.is_active,
-              u.setup_status, u.mfa_enabled, u.created_at, u.locked_until,
+              u.setup_status, u.mfa_enabled, u.created_at, u.locked_until, u.state,
               u.failed_login_attempts,
               array_agg(DISTINCT r.name) FILTER (WHERE r.name IS NOT NULL) as roles,
               array_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL) as teams,
-              array_agg(DISTINCT ut.team_id) FILTER (WHERE ut.team_id IS NOT NULL) as team_ids
+              array_agg(DISTINCT ut.team_id) FILTER (WHERE ut.team_id IS NOT NULL) as team_ids,
+              array_agg(DISTINCT mt.team_id) FILTER (WHERE mt.team_id IS NOT NULL) as manager_team_ids
        FROM users u
        LEFT JOIN user_roles ur ON ur.user_id = u.id
        LEFT JOIN roles r ON r.id = ur.role_id
        LEFT JOIN user_teams ut ON ut.user_id = u.id
        LEFT JOIN teams t ON t.id = ut.team_id
+       LEFT JOIN manager_teams mt ON mt.manager_id = u.id
        WHERE u.deleted_at IS NULL
        GROUP BY u.id
        ORDER BY u.last_name, u.first_name`

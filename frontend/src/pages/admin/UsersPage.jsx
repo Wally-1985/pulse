@@ -141,7 +141,12 @@ function UserModal({ open, onClose, user, teams, onSave }) {
 
   useEffect(() => {
     if (user) {
-      setForm({ email: user.email, firstName: user.first_name, lastName: user.last_name, roles: user.roles || ['member'], teamIds: user.team_ids || [], teamRoles: {}, isActive: user.is_active, state: user.state || '', sendWelcomeEmail: false });
+      const managerTeamIds = user.manager_team_ids || [];
+      const initialTeamRoles = {};
+      (user.team_ids || []).forEach(tid => {
+        initialTeamRoles[tid] = managerTeamIds.includes(tid) ? 'manager' : 'member';
+      });
+      setForm({ email: user.email, firstName: user.first_name, lastName: user.last_name, roles: user.roles || ['member'], teamIds: user.team_ids || [], teamRoles: initialTeamRoles, isActive: user.is_active, state: user.state || '', sendWelcomeEmail: false });
     } else {
       setForm({ email: '', firstName: '', lastName: '', roles: ['member'], teamIds: [], teamRoles: {}, isActive: true, state: '', sendWelcomeEmail: true });
     }
