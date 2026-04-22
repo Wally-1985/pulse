@@ -59,14 +59,14 @@ export default function YeastarActivity({ onAddWorkItem }) {
   );
 
   if (!data?.configured) {
-    if (data?.reason === 'no_extension') return (
+    if (data?.reason === 'not_configured') return null; // Yeastar not set up system-wide — hide silently
+    // no_extension or error — show prompt
+    return (
       <div className="rounded-xl border border-[var(--pulse-border)] bg-[var(--pulse-surface)] p-3">
         <p className="text-xs font-semibold mb-0.5">📞 Phone Calls</p>
-        <p className="text-xs text-[var(--pulse-muted)]">Set your extension number in Profile to see today's calls.</p>
+        <p className="text-xs text-[var(--pulse-muted)]">Add your extension number in <a href="/profile" className="text-[var(--pulse-accent)] hover:underline">Profile settings</a> to see today&apos;s calls.</p>
       </div>
     );
-    if (data?.reason === 'not_configured') return null; // Yeastar not set up — hide silently
-    return null;
   }
 
   const calls = data?.calls || [];
