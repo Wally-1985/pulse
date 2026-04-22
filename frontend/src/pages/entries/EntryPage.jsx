@@ -327,7 +327,7 @@ export default function EntryPage() {
       </div>
 
       {/* Right column - Zendesk activity */}
-      <div className="w-72 shrink-0 sticky top-20">
+      <div className="w-72 shrink-0 sticky top-20 flex flex-col gap-3">
         <ZendeskActivity
           readOnly={!canEdit}
           onCheckedChange={canEdit ? (checkedIds, tickets) => {
