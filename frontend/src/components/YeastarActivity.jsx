@@ -57,7 +57,7 @@ export default function YeastarActivity({ onAddCall, entryDate }) {
     <div className="rounded-xl border border-[var(--pulse-border)] bg-[var(--pulse-surface)] overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--pulse-border)]">
         <p className="text-xs font-semibold">📞 Today's Phone Calls</p>
-        <span className="text-[10px] text-[var(--pulse-muted)]">Ext {data.extension}{entryDate ? ' · ' + entryDate : ''}</span>
+        <span className="text-[10px] text-[var(--pulse-muted)]">Ext {data.extension}</span>
       </div>
 
       {calls.length === 0 ? (
