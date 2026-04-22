@@ -14,6 +14,7 @@ const WORK_TYPES = [
   { value: 'project', label: 'Project' },
   { value: 'bau_support', label: 'BAU / Support Call' },
   { value: 'maintenance', label: 'Maintenance' },
+  { value: 'meeting', label: 'Meeting' },
   { value: 'lunch', label: 'Lunch' },
   { value: 'other', label: 'Other' },
 ];
@@ -151,7 +152,7 @@ export default function EntryPage() {
   const addLunch = () => {
     const lunchItem = {
       id: tempId(), detail: 'Lunch', workType: 'lunch',
-      timeMinutes: 60, isLocked: true, colour: '',
+      timeMinutes: 60, isLocked: true, colour: '', completed: true,
     };
     const existing = workItems.filter(i => i.workType !== 'lunch');
     const updated = rebalance(assignColours([...existing, lunchItem]), totalMinutes);
@@ -159,7 +160,15 @@ export default function EntryPage() {
   };
 
   const updateItem = (id, field, value) => {
-    const updated = workItems.map(i => i.id === id ? { ...i, [field]: value } : i);
+    const updated = workItems.map(i => {
+      if (i.id !== id) return i;
+      const newItem = { ...i, [field]: value };
+      // Auto-complete lunch and meeting items
+      if (field === 'workType' && (value === 'lunch' || value === 'meeting')) {
+        newItem.completed = true;
+      }
+      return newItem;
+    });
     updateItems(updated);
   };
 
@@ -332,33 +341,22 @@ export default function EntryPage() {
         )}
       </div>
 
-      {/* Right column - Zendesk activity */}
+      {/* Right column - activity panels */}
       <div className="w-72 shrink-0 sticky top-20 flex flex-col gap-3">
         <ZendeskActivity
           readOnly={!canEdit}
-          onCheckedChange={canEdit ? (checkedIds, tickets) => {
-            const ZENDESK_ID = 'zendesk_tickets_item';
-            const existing = workItems.find(w => w.id === ZENDESK_ID);
-            if (checkedIds.length === 0) {
-              // Remove the Zendesk work item if all unchecked
-              if (existing) {
-                const filtered = workItems.filter(w => w.id !== ZENDESK_ID);
-                updateItems(rebalance(assignColours(filtered), totalMinutes));
-              }
-            } else {
-              // Build detail string from all checked tickets
-              const checkedTickets = tickets.filter(t => checkedIds.includes(String(t.id)));
-              const detail = 'Zendesk Tickets: ' + checkedTickets.map(t => '#' + t.id).join(', ');
-              if (existing) {
-                // Update the existing item detail
-                const updated = workItems.map(w => w.id === ZENDESK_ID ? { ...w, detail } : w);
-                updateItems(assignColours(updated));
-              } else {
-                // Add new Zendesk work item
-                const newItem = { id: ZENDESK_ID, detail, workType: 'bau_support', timeMinutes: 0, isLocked: false, colour: '' };
-                updateItems(rebalance(assignColours([...workItems, newItem]), totalMinutes));
-              }
-            }
+          onAddTicket={canEdit ? (ticket) => {
+            const detail = 'Zendesk #' + ticket.id + ': ' + ticket.subject;
+            const newItem = { id: 'temp_zd_' + ticket.id, detail, workType: 'bau_support', timeMinutes: 0, isLocked: false, colour: '' };
+            updateItems(rebalance(assignColours([...workItems, newItem]), totalMinutes));
+          } : null}
+        />
+        <YeastarActivity
+          onAddCall={canEdit ? (call) => {
+            const other = call.isCaller ? (call.call_to_name || call.call_to_number) : (call.call_from_name || call.call_from_number);
+            const detail = 'Phone Call: ' + other + ' (' + (call.isCaller ? 'Outgoing' : 'Incoming') + ')';
+            const newItem = { id: 'temp_ys_' + call.uid, detail, workType: 'bau_support', timeMinutes: 0, isLocked: false, colour: '' };
+            updateItems(rebalance(assignColours([...workItems, newItem]), totalMinutes));
           } : null}
         />
         <OngoingTasks
@@ -366,26 +364,6 @@ export default function EntryPage() {
           onAddWorkItem={canEdit ? (item) => {
             const newItem = { id: ('temp_' + Date.now()), detail: item.detail, workType: item.workType, timeMinutes: 0, isLocked: false, colour: '', completed: false };
             updateItems(rebalance(assignColours([...workItems, newItem]), totalMinutes));
-          } : null}
-        />
-        <YeastarActivity
-          onAddWorkItem={canEdit ? (calls) => {
-            const YEASTAR_ID = 'yeastar_calls_item';
-            const existing = workItems.find(w => w.id === YEASTAR_ID);
-            if (calls.length === 0) {
-              if (existing) updateItems(rebalance(assignColours(workItems.filter(w => w.id !== YEASTAR_ID)), totalMinutes));
-            } else {
-              const detail = 'Phone Calls: ' + calls.map(c => {
-                const other = c.isCaller ? (c.call_to_name || c.call_to_number) : (c.call_from_name || c.call_from_number);
-                return other;
-              }).join(', ');
-              if (existing) {
-                updateItems(assignColours(workItems.map(w => w.id === YEASTAR_ID ? { ...w, detail } : w)));
-              } else {
-                const newItem = { id: YEASTAR_ID, detail, workType: 'bau_support', timeMinutes: 0, isLocked: false, colour: '' };
-                updateItems(rebalance(assignColours([...workItems, newItem]), totalMinutes));
-              }
-            }
           } : null}
         />
       </div>
@@ -475,18 +453,20 @@ function WorkItemRow({ item, index, totalMinutes, readOnly, projects = [], onUpd
           )}
         </div>
 
-        {/* Completed checkbox + time */}
+        {/* Completed checkbox + time — hidden for lunch and meeting */}
         {!readOnly && (
           <div className="flex flex-col items-center gap-0.5 shrink-0">
-            <label className="flex items-center gap-1.5 cursor-pointer" title="Mark as completed">
-              <input
-                type="checkbox"
-                checked={!!item.completed}
-                onChange={(e) => onUpdate('completed', e.target.checked)}
-                className="accent-[var(--pulse-accent)]"
-              />
-              <span className="text-[10px] text-[var(--pulse-muted)]">Completed</span>
-            </label>
+            {item.workType !== 'lunch' && item.workType !== 'meeting' && (
+              <label className="flex items-center gap-1.5 cursor-pointer" title="Mark as completed">
+                <input
+                  type="checkbox"
+                  checked={!!item.completed}
+                  onChange={(e) => onUpdate('completed', e.target.checked)}
+                  className="accent-[var(--pulse-accent)]"
+                />
+                <span className="text-[10px] text-[var(--pulse-muted)]">Completed</span>
+              </label>
+            )}
             <span className="text-xs text-[var(--pulse-muted)] font-mono opacity-70">
               {formatPct(item.timeMinutes, totalMinutes)} · {formatTime(item.timeMinutes)}
             </span>
