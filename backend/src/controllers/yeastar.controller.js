@@ -66,7 +66,7 @@ exports.getTodayActivity = async (req, res) => {
       return res.json({ configured: false, reason: 'not_configured', calls: [] });
     }
 
-    const calls = await yeastar.getTodayCDR(extensionNumber);
+    const calls = await yeastar.getTodayCDR(extensionNumber, req.query.date || null);
     res.json({ configured: true, extension: extensionNumber, calls });
   } catch (err) {
     console.error('Yeastar getTodayActivity error:', err.message);

@@ -94,8 +94,8 @@ const getToken = async (cfg) => {
   return tokenCache.accessToken;
 };
 
-// Fetch today's CDR for a given extension number
-const getTodayCDR = async (extensionNumber) => {
+// Fetch CDR for a given extension number on a specific date (defaults to today)
+const getTodayCDR = async (extensionNumber, dateOverride = null) => {
   const cfg = await getConfig();
   if (!cfg.enabled || !cfg.host || !cfg.clientId || !cfg.clientSecret) {
     throw new Error('Yeastar not configured');
@@ -103,17 +103,22 @@ const getTodayCDR = async (extensionNumber) => {
 
   const token = await getToken(cfg);
 
-  // Build today's date range as Unix timestamps (local midnight to 23:59:59)
-  const now = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+  // Use provided date or default to today (local time)
+  let yyyy, mm, dd;
+  if (dateOverride && /^\d{4}-\d{2}-\d{2}$/.test(dateOverride)) {
+    [yyyy, mm, dd] = dateOverride.split('-');
+  } else {
+    const now = new Date();
+    yyyy = now.getFullYear();
+    mm = String(now.getMonth() + 1).padStart(2, '0');
+    dd = String(now.getDate()).padStart(2, '0');
+  }
+
+  // Build date range as Unix timestamps
+  const startOfDay = new Date(`${yyyy}-${mm}-${dd}T00:00:00`);
+  const endOfDay = new Date(`${yyyy}-${mm}-${dd}T23:59:59`);
   const startTs = Math.floor(startOfDay.getTime() / 1000);
   const endTs = Math.floor(endOfDay.getTime() / 1000);
-
-  // Also build date string format as fallback (some P-Series versions use this)
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const dd = String(now.getDate()).padStart(2, '0');
   const startTime = `${yyyy}-${mm}-${dd} 00:00:00`;
   const endTime = `${yyyy}-${mm}-${dd} 23:59:59`;
 

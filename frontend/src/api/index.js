@@ -147,7 +147,7 @@ export const yeastarApi = {
   getSettings: () => api.get('/yeastar/settings'),
   saveSettings: (data) => api.put('/yeastar/settings', data),
   testConnection: () => api.post('/yeastar/settings/test'),
-  getTodayActivity: () => api.get('/yeastar/today'),
+  getTodayActivity: (date) => api.get('/yeastar/today' + (date ? '?date=' + date : '')),
 };
 
 export const projectsApi = {

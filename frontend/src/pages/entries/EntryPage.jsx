@@ -353,6 +353,7 @@ export default function EntryPage() {
           } : null}
         />
         <YeastarActivity
+          entryDate={date}
           onAddCall={canEdit ? (call) => {
             const other = call.isCaller ? (call.call_to_name || call.call_to_number) : (call.call_from_name || call.call_from_number);
             const detail = 'Phone Call: ' + other + ' (' + (call.isCaller ? 'Outgoing' : 'Incoming') + ')';
