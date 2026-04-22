@@ -302,6 +302,9 @@ const migrate = async () => {
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS roster_finish_time TIME DEFAULT NULL`);
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS roster_working_days VARCHAR(7) DEFAULT 'MTWTF__'`);
 
+    // Yeastar extension number on user profile
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS extension_number VARCHAR(20) DEFAULT NULL`);
+
     // Task 8 - Azure OpenAI / AI infrastructure
     await client.query(`CREATE TABLE IF NOT EXISTS ai_prompt_templates (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

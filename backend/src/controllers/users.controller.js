@@ -1,4 +1,4 @@
-﻿const bcrypt = require('bcryptjs');
+const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { query, getClient } = require('../config/database');
 const { audit } = require('../services/audit');
@@ -146,7 +146,7 @@ exports.createUser = async (req, res) => {
 // PUT /users/:id
 exports.updateUser = async (req, res) => {
   const { id } = req.params;
-  const { firstName, lastName, isActive, roles, teamIds, teamRoles = {}, timezone, notificationPreference, state } = req.body;
+  const { firstName, lastName, isActive, roles, teamIds, teamRoles = {}, timezone, notificationPreference, state, extensionNumber } = req.body;
   const client = await getClient();
   try {
     await client.query('BEGIN');
@@ -162,9 +162,10 @@ exports.updateUser = async (req, res) => {
         timezone = COALESCE($4, timezone),
         notification_preference = COALESCE($5, notification_preference),
         state = $6,
+        extension_number = $7,
         updated_at = NOW()
-       WHERE id = $7`,
-      [firstName, lastName, isActive, timezone, notificationPreference, state || null, id]
+       WHERE id = $8`,
+      [firstName, lastName, isActive, timezone, notificationPreference, state || null, extensionNumber || null, id]
     );
 
     if (roles !== undefined) {
@@ -242,7 +243,7 @@ exports.unlockUser = async (req, res) => {
 exports.getProfile = async (req, res) => {
   try {
     const result = await query(
-      `SELECT id, email, first_name, last_name, avatar_url, timezone, notification_preference, mfa_enabled, state
+      `SELECT id, email, first_name, last_name, avatar_url, timezone, notification_preference, mfa_enabled, state, extension_number
        FROM users WHERE id = $1`,
       [req.user.id]
     );
@@ -254,7 +255,7 @@ exports.getProfile = async (req, res) => {
 
 // PUT /profile
 exports.updateProfile = async (req, res) => {
-  const { firstName, lastName, timezone, notificationPreference, state } = req.body;
+  const { firstName, lastName, timezone, notificationPreference, state, extensionNumber } = req.body;
   try {
     await query(
       `UPDATE users SET
@@ -263,9 +264,10 @@ exports.updateProfile = async (req, res) => {
         timezone = COALESCE($3, timezone),
         notification_preference = COALESCE($4, notification_preference),
         state = $5,
+        extension_number = $6,
         updated_at = NOW()
-       WHERE id = $6`,
-      [firstName, lastName, timezone, notificationPreference, state || null, req.user.id]
+       WHERE id = $7`,
+      [firstName, lastName, timezone, notificationPreference, state || null, extensionNumber || null, req.user.id]
     );
     res.json({ message: 'Profile updated' });
   } catch (err) {

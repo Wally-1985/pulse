@@ -12,6 +12,7 @@ const adminCtrl = require('../controllers/admin.controller');
 const zendeskCtrl = require('../controllers/zendesk.controller');
 const aiCtrl = require('../controllers/ai.controller');
 const projectsCtrl = require('../controllers/projects.controller');
+const yeastarCtrl = require('../controllers/yeastar.controller');
 const tasksCtrl = require('../controllers/tasks.controller');
 
 // ─── AUTH ──────────────────────────────────────────────────────────────────
@@ -129,6 +130,12 @@ router.put('/projects/:id/tasks/:taskId', authenticate, projectsCtrl.updateTask)
 router.delete('/projects/:id/tasks/:taskId', authenticate, projectsCtrl.deleteTask);
 router.post('/projects/:id/notes', authenticate, projectsCtrl.createNote);
 router.delete('/projects/:id/notes/:noteId', authenticate, projectsCtrl.deleteNote);
+
+// ─── YEASTAR ───────────────────────────────────────────────────────────────
+router.get('/yeastar/settings', authenticate, isAdmin, yeastarCtrl.getSettings);
+router.put('/yeastar/settings', authenticate, isAdmin, yeastarCtrl.saveSettings);
+router.post('/yeastar/settings/test', authenticate, isAdmin, yeastarCtrl.testConnection);
+router.get('/yeastar/today', authenticate, yeastarCtrl.getTodayActivity);
 router.get('/manager/submissions/status', authenticate, isManager, managerCtrl.getSubmissionStatus);
 
 module.exports = router;

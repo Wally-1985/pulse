@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { usersApi, authApi, zendeskApi } from '../../api';
 import { Card, Button, Input, Badge, Modal, Spinner, Avatar } from '../../components/ui';
@@ -92,6 +92,7 @@ function ProfileTab({ profile, onSave }) {
     timezone: profile?.timezone || 'UTC',
     notificationPreference: profile?.notification_preference || 'both',
     state: profile?.state || '',
+    extensionNumber: profile?.extension_number || '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -150,6 +151,14 @@ function ProfileTab({ profile, onSave }) {
           </select>
           <p className="text-xs text-[var(--pulse-muted)]">Used to determine which public holidays apply to you.</p>
         </div>
+
+        <Input
+          label="Extension Number"
+          placeholder="e.g. 11551"
+          value={form.extensionNumber}
+          onChange={set('extensionNumber')}
+          hint="Your Yeastar phone extension. Used to show your calls on the Daily Entry page."
+        />
 
         <Button onClick={handleSave} loading={saving} className="w-fit">Save Changes</Button>
       </div>

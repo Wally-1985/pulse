@@ -143,6 +143,13 @@ export const aiApi = {
   getJobs: () => api.get('/ai/jobs'),
 };
 
+export const yeastarApi = {
+  getSettings: () => api.get('/yeastar/settings'),
+  saveSettings: (data) => api.put('/yeastar/settings', data),
+  testConnection: () => api.post('/yeastar/settings/test'),
+  getTodayActivity: () => api.get('/yeastar/today'),
+};
+
 export const projectsApi = {
   getProjects: () => api.get('/projects'),
   getProject: (id) => api.get('/projects/' + id),

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { adminApi, aiApi } from '../../api';
+import { adminApi, aiApi, yeastarApi } from '../../api';
 import { Card, Button, Input, Badge, Spinner, Modal } from '../../components/ui';
 import toast from 'react-hot-toast';
 import { usePageTitle } from '../../hooks/usePageTitle';
@@ -12,6 +12,7 @@ const TABS = [
   { key: 'backups', label: 'Backups' },
   { key: 'api', label: 'API Keys' },
   { key: 'ai', label: 'AI Settings' },
+  { key: 'yeastar', label: 'Yeastar' },
   { key: 'health', label: 'System Health' },
 ];
 
@@ -59,6 +60,7 @@ export default function AdminPage() {
               {tab === 'api' && <ApiKeysTab />}
               {tab === 'health' && <HealthTab />}
               {tab === 'ai' && <AISettingsTab />}
+              {tab === 'yeastar' && <YeastarSettingsTab />}
             </>
           )}
         </div>
@@ -545,5 +547,72 @@ function AISettingsTab() {
         </div>
       </Card>
     </div>
+  );
+}
+
+function YeastarSettingsTab() {
+  const [settings, setSettings] = useState(null);
+  const [form, setForm] = useState({ host: '', clientId: '', clientSecret: '', enabled: false });
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+
+  const load = async () => {
+    try {
+      const r = await yeastarApi.getSettings();
+      setSettings(r.data);
+      setForm(f => ({ ...f, host: r.data.host || '', clientId: r.data.clientId || '', enabled: r.data.enabled || false }));
+    } catch { toast.error('Failed to load Yeastar settings'); }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try { await yeastarApi.saveSettings(form); toast.success('Yeastar settings saved'); load(); }
+    catch { toast.error('Failed to save'); }
+    finally { setSaving(false); }
+  };
+
+  const handleTest = async () => {
+    setTesting(true); setTestResult(null);
+    try {
+      await yeastarApi.testConnection();
+      setTestResult({ ok: true, msg: 'Connected successfully' });
+    } catch (err) {
+      setTestResult({ ok: false, msg: err.response?.data?.error || err.message });
+    } finally { setTesting(false); }
+  };
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-base font-semibold">Yeastar P-Series Configuration</h2>
+          <p className="text-xs text-[var(--pulse-muted)] mt-0.5">Connect to Yeastar P-Series to show today&apos;s calls on the Daily Entry page.</p>
+        </div>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={form.enabled} onChange={e => setForm(f => ({ ...f, enabled: e.target.checked }))} className="accent-[var(--pulse-accent)]" />
+          <span className="text-sm font-medium">Enabled</span>
+        </label>
+      </div>
+      <div className="flex flex-col gap-3">
+        <Input label="Yeastar Host / IP" placeholder="4.237.56.241 or pbx.example.com" value={form.host} onChange={e => setForm(f => ({ ...f, host: e.target.value }))} />
+        <Input label="Client ID" placeholder="From Yeastar admin → Integrations → API" value={form.clientId} onChange={e => setForm(f => ({ ...f, clientId: e.target.value }))} />
+        <Input label="Client Secret" type="password" placeholder={settings?.hasClientSecret ? 'Set — enter new secret to change' : 'Enter client secret'} value={form.clientSecret} onChange={e => setForm(f => ({ ...f, clientSecret: e.target.value }))} />
+        <p className="text-xs text-[var(--pulse-muted)]">
+          To get credentials: Yeastar admin panel → <strong>Integrations → API → Add Application</strong>. Set the application type to &quot;Third-party Integration&quot;.
+        </p>
+      </div>
+      <div className="flex items-center gap-3 mt-4 flex-wrap">
+        <Button loading={saving} onClick={handleSave}>Save Settings</Button>
+        <Button variant="secondary" loading={testing} onClick={handleTest} disabled={!settings?.hasClientSecret && !form.clientSecret}>Test Connection</Button>
+        {testResult && (
+          <span className={'text-sm ' + (testResult.ok ? 'text-green-400' : 'text-red-400')}>
+            {testResult.ok ? '✓ ' : '✗ '}{testResult.msg}
+          </span>
+        )}
+      </div>
+    </Card>
   );
 }

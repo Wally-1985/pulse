@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import TimeBar, { formatTime, formatPct } from '../../components/TimeBar';
 import ZendeskActivity from '../../components/ZendeskActivity';
 import OngoingTasks from '../../components/OngoingTasks';
+import YeastarActivity from '../../components/YeastarActivity';
 import { Button, Select, Badge, Spinner } from '../../components/ui';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import toast from 'react-hot-toast';
@@ -359,6 +360,26 @@ export default function EntryPage() {
           onAddWorkItem={canEdit ? (item) => {
             const newItem = { id: ('temp_' + Date.now()), detail: item.detail, workType: item.workType, timeMinutes: 0, isLocked: false, colour: '', completed: false };
             updateItems(rebalance(assignColours([...workItems, newItem]), totalMinutes));
+          } : null}
+        />
+        <YeastarActivity
+          onAddWorkItem={canEdit ? (calls) => {
+            const YEASTAR_ID = 'yeastar_calls_item';
+            const existing = workItems.find(w => w.id === YEASTAR_ID);
+            if (calls.length === 0) {
+              if (existing) updateItems(rebalance(assignColours(workItems.filter(w => w.id !== YEASTAR_ID)), totalMinutes));
+            } else {
+              const detail = 'Phone Calls: ' + calls.map(c => {
+                const other = c.isCaller ? (c.call_to_name || c.call_to_number) : (c.call_from_name || c.call_from_number);
+                return other;
+              }).join(', ');
+              if (existing) {
+                updateItems(assignColours(workItems.map(w => w.id === YEASTAR_ID ? { ...w, detail } : w)));
+              } else {
+                const newItem = { id: YEASTAR_ID, detail, workType: 'bau_support', timeMinutes: 0, isLocked: false, colour: '' };
+                updateItems(rebalance(assignColours([...workItems, newItem]), totalMinutes));
+              }
+            }
           } : null}
         />
       </div>
