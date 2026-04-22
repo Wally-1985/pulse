@@ -55,7 +55,7 @@ exports.getProject = async (req, res) => {
   try {
     const [proj, tasks, notes, assignments, history] = await Promise.all([
       query(`SELECT p.*, u.first_name || ' ' || u.last_name as created_by_name FROM projects p LEFT JOIN users u ON u.id = p.created_by WHERE p.id = $1 AND p.deleted_at IS NULL`, [req.params.id]),
-      query(`SELECT pt.*, u.first_name || ' ' || u.last_name as created_by_name FROM project_tasks pt LEFT JOIN users u ON u.id = pt.created_by WHERE pt.project_id = $1 AND pt.deleted_at IS NULL ORDER BY pt.sort_order, pt.created_at`, [req.params.id]),
+      query(`SELECT pt.*, u.first_name || ' ' || u.last_name as created_by_name, a.first_name || ' ' || a.last_name as assigned_to_name FROM project_tasks pt LEFT JOIN users u ON u.id = pt.created_by LEFT JOIN users a ON a.id = pt.assigned_to WHERE pt.project_id = $1 AND pt.deleted_at IS NULL ORDER BY pt.sort_order, pt.created_at`, [req.params.id]),
       query(`SELECT pn.*, u.first_name || ' ' || u.last_name as created_by_name FROM project_notes pn LEFT JOIN users u ON u.id = pn.created_by WHERE pn.project_id = $1 ORDER BY pn.created_at DESC`, [req.params.id]),
       query(`SELECT pua.*, u.first_name, u.last_name, u.email FROM project_user_assignments pua JOIN users u ON u.id = pua.user_id WHERE pua.project_id = $1`, [req.params.id]),
       query(`SELECT pdc.*, u.first_name || ' ' || u.last_name as changed_by_name FROM project_due_date_changes pdc LEFT JOIN users u ON u.id = pdc.changed_by WHERE pdc.project_id = $1 AND pdc.task_id IS NULL ORDER BY pdc.changed_at DESC LIMIT 10`, [req.params.id]),
@@ -141,7 +141,7 @@ exports.createTask = async (req, res) => {
 };
 
 exports.updateTask = async (req, res) => {
-  const { title, description, status, dueDate, startDate, finishedDate, dueDateChangeReason } = req.body;
+  const { title, description, status, dueDate, startDate, finishedDate, dueDateChangeReason, assignedTo, notes } = req.body;
   try {
     const existing = await query(`SELECT due_date FROM project_tasks WHERE id=$1`, [req.params.taskId]);
     const oldDue = existing.rows[0]?.due_date ? existing.rows[0].due_date.toISOString().substring(0,10) : null;
@@ -152,9 +152,9 @@ exports.updateTask = async (req, res) => {
     const finDate = status === 'completed' && !finishedDate ? new Date().toISOString().substring(0,10) : (finishedDate??null);
     await query(
       `UPDATE project_tasks SET title=COALESCE($1,title), description=$2, status=COALESCE($3,status),
-       due_date=$4, start_date=$5, finished_date=$6, updated_by=$7, updated_at=NOW()
-       WHERE id=$8 AND project_id=$9 AND deleted_at IS NULL`,
-      [title, description??null, status, newDue, startDate??null, finDate, req.user.id, req.params.taskId, req.params.id]
+       due_date=$4, start_date=$5, finished_date=$6, assigned_to=$7, notes=$8, updated_by=$9, updated_at=NOW()
+       WHERE id=$10 AND project_id=$11 AND deleted_at IS NULL`,
+      [title, description??null, status, newDue, startDate??null, finDate, assignedTo??null, notes??null, req.user.id, req.params.taskId, req.params.id]
     );
     if (oldDue !== newDue && dueDateChangeReason?.trim()) {
       await query(`INSERT INTO project_due_date_changes (id,project_id,task_id,old_due_date,new_due_date,reason,changed_by) VALUES ($1,$2,$3,$4,$5,$6,$7)`,

@@ -429,6 +429,8 @@ const migrate = async () => {
     await client.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS finished_date DATE DEFAULT NULL`);
     await client.query(`ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS start_date DATE DEFAULT NULL`);
     await client.query(`ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS finished_date DATE DEFAULT NULL`);
+    await client.query(`ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS assigned_to UUID REFERENCES users(id) ON DELETE SET NULL`);
+    await client.query(`ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT NULL`);
 
     // Due date change audit log
     await client.query(`CREATE TABLE IF NOT EXISTS project_due_date_changes (
