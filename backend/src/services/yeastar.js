@@ -2,15 +2,21 @@
  * Yeastar P-Series service
  * OAuth 2.0: POST credentials → access_token (30min) + refresh_token (24h)
  * Token is cached in memory and refreshed automatically.
+ * Uses HTTPS on port 8088 with self-signed cert (rejectUnauthorized: false)
  */
 
 const axios = require('axios');
+const https = require('https');
 const { query } = require('../config/database');
 
+// Yeastar P-Series uses self-signed cert on port 8088
+const httpsAgent = new https.Agent({ rejectUnauthorized: false });
+
+const HEADERS = { 'Content-Type': 'application/json', 'User-Agent': 'OpenAPI' };
+
 const getBaseUrl = (host) => {
-  // Strip any existing protocol/port then build with correct port
   const clean = host.replace(/^https?:\/\//, '').replace(/:\d+$/, '');
-  return `http://${clean}:8088`;
+  return `https://${clean}:8088`;
 };
 
 // In-memory token cache
@@ -33,8 +39,6 @@ const isEnabled = async () => {
   return cfg.enabled && cfg.host && cfg.clientId && cfg.clientSecret;
 };
 
-const HEADERS = { 'Content-Type': 'application/json', 'User-Agent': 'OpenAPI' };
-
 const getToken = async (cfg) => {
   const now = Date.now();
 
@@ -49,7 +53,7 @@ const getToken = async (cfg) => {
       const url = `${getBaseUrl(cfg.host)}/openapi/v1.0/refresh_token`;
       const res = await axios.post(url,
         { refresh_token: tokenCache.refreshToken },
-        { headers: HEADERS, timeout: 10000 }
+        { headers: HEADERS, httpsAgent, timeout: 10000 }
       );
       if (res.data.errcode === 0) {
         tokenCache = {
@@ -68,7 +72,7 @@ const getToken = async (cfg) => {
   try {
     res = await axios.post(url,
       { username: cfg.clientId, password: cfg.clientSecret },
-      { headers: HEADERS, timeout: 10000 }
+      { headers: HEADERS, httpsAgent, timeout: 10000 }
     );
   } catch (err) {
     const detail = err.response?.data ? JSON.stringify(err.response.data) : err.message;
@@ -110,6 +114,7 @@ const getTodayCDR = async (extensionNumber) => {
   const res = await axios.get(`${getBaseUrl(cfg.host)}/openapi/v1.0/cdr/list`, {
     params: { access_token: token, start_time: startTime, end_time: endTime, call_from: extensionNumber, page: 1, page_size: 100 },
     headers: HEADERS,
+    httpsAgent,
     timeout: 15000,
   });
 
@@ -118,6 +123,7 @@ const getTodayCDR = async (extensionNumber) => {
   const res2 = await axios.get(`${getBaseUrl(cfg.host)}/openapi/v1.0/cdr/list`, {
     params: { access_token: token, start_time: startTime, end_time: endTime, call_to: extensionNumber, page: 1, page_size: 100 },
     headers: HEADERS,
+    httpsAgent,
     timeout: 15000,
   });
 
