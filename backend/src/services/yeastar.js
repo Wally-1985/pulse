@@ -64,10 +64,19 @@ const getToken = async (cfg) => {
 
   // Full authentication — username = clientId, password = clientSecret
   const url = `${getBaseUrl(cfg.host)}/openapi/v1.0/get_token`;
-  const res = await axios.post(url,
-    { username: cfg.clientId, password: cfg.clientSecret },
-    { headers: HEADERS, timeout: 10000 }
-  );
+  let res;
+  try {
+    res = await axios.post(url,
+      { username: cfg.clientId, password: cfg.clientSecret },
+      { headers: HEADERS, timeout: 10000 }
+    );
+  } catch (err) {
+    const detail = err.response?.data ? JSON.stringify(err.response.data) : err.message;
+    console.error('[Yeastar] Auth request failed:', err.response?.status, detail);
+    throw new Error('Auth request failed (' + (err.response?.status || 'no response') + '): ' + detail);
+  }
+
+  console.log('[Yeastar] Auth response:', JSON.stringify(res.data));
 
   if (res.data.errcode !== 0) {
     throw new Error('Yeastar auth failed: ' + res.data.errmsg);
