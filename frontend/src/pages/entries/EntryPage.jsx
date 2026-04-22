@@ -493,9 +493,14 @@ function WorkItemRow({ item, index, totalMinutes, readOnly, projects = [], onUpd
           </div>
         )}
         {readOnly && (
-          <span className="text-xs text-[var(--pulse-muted)] font-mono opacity-70 shrink-0">
-            {formatPct(item.timeMinutes, totalMinutes)} · {formatTime(item.timeMinutes)}
-          </span>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            {item.completed && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">Completed</span>
+            )}
+            <span className="text-xs text-[var(--pulse-muted)] font-mono opacity-70">
+              {formatPct(item.timeMinutes, totalMinutes)} · {formatTime(item.timeMinutes)}
+            </span>
+          </div>
         )}
 
         {/* Remove button */}
