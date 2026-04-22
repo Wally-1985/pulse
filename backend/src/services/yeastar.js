@@ -103,8 +103,14 @@ const getTodayCDR = async (extensionNumber) => {
 
   const token = await getToken(cfg);
 
-  // Build today's date range (local time)
+  // Build today's date range as Unix timestamps (local midnight to 23:59:59)
   const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+  const startTs = Math.floor(startOfDay.getTime() / 1000);
+  const endTs = Math.floor(endOfDay.getTime() / 1000);
+
+  // Also build date string format as fallback (some P-Series versions use this)
   const yyyy = now.getFullYear();
   const mm = String(now.getMonth() + 1).padStart(2, '0');
   const dd = String(now.getDate()).padStart(2, '0');
@@ -135,9 +141,16 @@ const getTodayCDR = async (extensionNumber) => {
     if (!allCalls.find(c => c.uid === call.uid)) allCalls.push(call);
   }
 
-  // Sort by time desc, filter answered only
+  // Filter to today only by timestamp (covers cases where API date filter is ignored)
+  // Sort by time desc, answered calls with talk time only
   return allCalls
-    .filter(c => c.disposition === 'ANSWERED' && parseInt(c.talk_duration) > 0)
+    .filter(c => {
+      const ts = parseInt(c.timestamp);
+      return c.disposition === 'ANSWERED'
+        && parseInt(c.talk_duration) > 0
+        && ts >= startTs
+        && ts <= endTs;
+    })
     .sort((a, b) => b.timestamp - a.timestamp);
 };
 
