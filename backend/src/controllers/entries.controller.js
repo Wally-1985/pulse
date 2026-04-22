@@ -129,8 +129,8 @@ exports.upsertEntry = async (req, res) => {
     for (let i = 0; i < (workItems || []).length; i++) {
       const item = workItems[i];
       const result = await client.query(
-        `INSERT INTO work_items (entry_id, detail, work_type, time_minutes, is_locked, sort_order, colour, project_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+        `INSERT INTO work_items (entry_id, detail, work_type, time_minutes, is_locked, sort_order, colour, project_id, completed)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
         [
           entry.id,
           item.detail || '',
@@ -140,6 +140,7 @@ exports.upsertEntry = async (req, res) => {
           i,
           COLOURS[i % COLOURS.length],
           item.projectId || null,
+          item.completed || false,
         ]
       );
       // Auto-update project last_activity_at when a work item is linked

@@ -191,6 +191,12 @@ export default function EntryPage() {
     setSubmitting(true);
     try {
       await entriesApi.submitEntry(entry.id);
+      // Sync completed state to ongoing tasks
+      try {
+        await tasksApi.sync({ entryId: entry.id, workItems, entryDate: date });
+      } catch (e) { console.error('Task sync failed:', e); }
+      // Clear draft
+      try { await entriesApi.deleteDraft(date); } catch {}
       setEntry(prev => ({ ...prev, status: 'submitted', submittedAt: new Date().toISOString() }));
       toast.success('Entry submitted!');
       setTimeout(() => navigate(-1), 800);

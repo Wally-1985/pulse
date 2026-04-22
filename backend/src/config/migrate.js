@@ -421,6 +421,7 @@ const migrate = async () => {
     )`);
 
     await client.query(`ALTER TABLE work_items ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES projects(id) ON DELETE SET NULL`);
+    await client.query(`ALTER TABLE work_items ADD COLUMN IF NOT EXISTS completed BOOLEAN DEFAULT false`);
 
     await client.query(`CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status) WHERE deleted_at IS NULL`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_project_tasks_project ON project_tasks(project_id) WHERE deleted_at IS NULL`);
