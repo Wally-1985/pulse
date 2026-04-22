@@ -597,7 +597,7 @@ function YeastarSettingsTab() {
         </label>
       </div>
       <div className="flex flex-col gap-3">
-        <Input label="Yeastar Host / IP" placeholder="4.237.56.241 or pbx.example.com" value={form.host} onChange={e => setForm(f => ({ ...f, host: e.target.value }))} />
+        <Input label="Yeastar Host / IP" placeholder="4.237.56.241" value={form.host} onChange={e => setForm(f => ({ ...f, host: e.target.value }))} hint="IP or hostname only — port 8088 is used automatically" />
         <Input label="Client ID" placeholder="From Yeastar admin → Integrations → API" value={form.clientId} onChange={e => setForm(f => ({ ...f, clientId: e.target.value }))} />
         <Input label="Client Secret" type="password" placeholder={settings?.hasClientSecret ? 'Set — enter new secret to change' : 'Enter client secret'} value={form.clientSecret} onChange={e => setForm(f => ({ ...f, clientSecret: e.target.value }))} />
         <p className="text-xs text-[var(--pulse-muted)]">

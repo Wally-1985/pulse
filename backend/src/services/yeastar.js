@@ -5,15 +5,13 @@
  */
 
 const axios = require('axios');
-const https = require('https');
-const tls = require('tls');
 const { query } = require('../config/database');
 
-// TLS fix (same as Zendesk — handles modern OpenSSL)
-function makeAgent() {
-  const ctx = tls.createSecureContext({ ecdhCurve: 'P-256:P-384:P-521:X25519', minVersion: 'TLSv1.2' });
-  return new https.Agent({ secureContext: ctx, rejectUnauthorized: false }); // P-Series uses self-signed cert on local IPs
-}
+const getBaseUrl = (host) => {
+  // Strip any existing protocol/port then build with correct port
+  const clean = host.replace(/^https?:\/\//, '').replace(/:\d+$/, '');
+  return `http://${clean}:8088`;
+};
 
 // In-memory token cache
 let tokenCache = { accessToken: null, refreshToken: null, expiresAt: 0 };
@@ -46,12 +44,12 @@ const getToken = async (cfg) => {
   // Try refresh token if available
   if (tokenCache.refreshToken && tokenCache.expiresAt > now - 23 * 60 * 60 * 1000) {
     try {
-      const url = `https://${cfg.host}/openapi/v1.0/get_token`;
+      const url = `${getBaseUrl(cfg.host)}/openapi/v1.0/get_token`;
       const res = await axios.post(url, {
         grant_type: 'refresh_token',
         client_id: cfg.clientId,
         refresh_token: tokenCache.refreshToken,
-      }, { httpsAgent: makeAgent(), timeout: 10000 });
+      }, { timeout: 10000 });
 
       if (res.data.errcode === 0) {
         tokenCache = {
@@ -65,12 +63,12 @@ const getToken = async (cfg) => {
   }
 
   // Full authentication
-  const url = `https://${cfg.host}/openapi/v1.0/get_token`;
+  const url = `${getBaseUrl(cfg.host)}/openapi/v1.0/get_token`;
   const res = await axios.post(url, {
     grant_type: 'client_credentials',
     client_id: cfg.clientId,
     client_secret: cfg.clientSecret,
-  }, { httpsAgent: makeAgent(), timeout: 10000 });
+  }, { timeout: 10000 });
 
   if (res.data.errcode !== 0) {
     throw new Error('Yeastar auth failed: ' + res.data.errmsg);
@@ -101,24 +99,22 @@ const getTodayCDR = async (extensionNumber) => {
   const startTime = `${yyyy}-${mm}-${dd} 00:00:00`;
   const endTime = `${yyyy}-${mm}-${dd} 23:59:59`;
 
-  const res = await axios.get(`https://${cfg.host}/openapi/v1.0/cdr/list`, {
+  const res = await axios.get(`${getBaseUrl(cfg.host)}/openapi/v1.0/cdr/list`, {
     params: {
       access_token: token,
       start_time: startTime,
       end_time: endTime,
-      // Filter calls where this extension was caller or callee
       call_from: extensionNumber,
       page: 1,
       page_size: 100,
     },
-    httpsAgent: makeAgent(),
     timeout: 15000,
   });
 
   const fromCalls = (res.data.errcode === 0) ? (res.data.data || []) : [];
 
   // Also fetch calls where they were the callee
-  const res2 = await axios.get(`https://${cfg.host}/openapi/v1.0/cdr/list`, {
+  const res2 = await axios.get(`${getBaseUrl(cfg.host)}/openapi/v1.0/cdr/list`, {
     params: {
       access_token: token,
       start_time: startTime,
@@ -127,7 +123,6 @@ const getTodayCDR = async (extensionNumber) => {
       page: 1,
       page_size: 100,
     },
-    httpsAgent: makeAgent(),
     timeout: 15000,
   });
 
