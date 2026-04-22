@@ -6,14 +6,14 @@ const STATUS_COLOURS = { new: 'danger', open: 'warning', pending: 'info', hold: 
 const ACTIVITY_COLOURS = { 'Public Reply': 'success', 'Internal Note': 'info', 'Reopened': 'warning', 'Ticket Created': 'accent' };
 const getActivityVariant = (a) => ACTIVITY_COLOURS[a] || 'default';
 
-export default function ZendeskActivity({ onAddTicket, readOnly }) {
+export default function ZendeskActivity({ onAddTicket, readOnly, entryDate }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [added, setAdded] = useState(new Set());
 
   const load = () => {
     setLoading(true);
-    zendeskApi.getTodayActivity()
+    zendeskApi.getTodayActivity(entryDate)
       .then(r => setData(r.data))
       .catch(() => setData({ configured: false, tickets: [], error: true }))
       .finally(() => setLoading(false));

@@ -73,8 +73,11 @@ exports.getTodayActivity = async (req, res) => {
     const zendeskUserId = meData.user && meData.user.id;
     if (!zendeskUserId) return res.json({ configured: true, tickets: [] });
 
-    const todayLocal = new Date();
-    const dateStr = todayLocal.getFullYear() + '-' + String(todayLocal.getMonth()+1).padStart(2,'0') + '-' + String(todayLocal.getDate()).padStart(2,'0');
+    // Use requested date or default to today
+    const dateStr = req.query.date || (() => {
+      const d = new Date();
+      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    })();
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
     // Run targeted searches to find tickets this user specifically touched

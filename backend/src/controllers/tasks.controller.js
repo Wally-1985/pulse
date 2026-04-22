@@ -73,6 +73,10 @@ exports.syncFromEntry = async (req, res) => {
   const { entryId, workItems, entryDate } = req.body;
   try {
     for (const item of (workItems || [])) {
+      // Never carry forward lunch, meeting, or Zendesk/Yeastar items
+      const skipTypes = ['lunch', 'meeting'];
+      if (skipTypes.includes(item.workType)) continue;
+      if (item.detail && (item.detail.startsWith('Zendesk #') || item.detail.startsWith('Phone Call:'))) continue;
       const existing = await query(
         `SELECT id FROM ongoing_tasks WHERE user_id = $1 AND source_entry_id = $2 AND detail = $3`,
         [req.user.id, entryId, item.detail]

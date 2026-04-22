@@ -110,7 +110,7 @@ export const zendeskApi = {
   getSettings: () => api.get('/zendesk/settings'),
   saveSettings: (data) => api.put('/zendesk/settings', data),
   testConnection: () => api.get('/zendesk/test'),
-  getTodayActivity: () => api.get('/zendesk/today'),
+  getTodayActivity: (date) => api.get('/zendesk/today' + (date ? '?date=' + date : '')),
   getTeamTodayActivity: () => api.get('/manager/zendesk/today'),
 };
 

@@ -345,6 +345,7 @@ export default function EntryPage() {
       <div className="w-72 shrink-0 sticky top-20 flex flex-col gap-3">
         <ZendeskActivity
           readOnly={!canEdit}
+          entryDate={date}
           onAddTicket={canEdit ? (ticket) => {
             const detail = 'Zendesk #' + ticket.id + ': ' + ticket.subject;
             const newItem = { id: 'temp_zd_' + ticket.id, detail, workType: 'bau_support', timeMinutes: 0, isLocked: false, colour: '' };
