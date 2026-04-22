@@ -68,6 +68,8 @@ exports.getEntry = async (req, res) => {
         isLocked: i.is_locked,
         sortOrder: i.sort_order,
         colour: i.colour,
+        projectId: i.project_id || null,
+        completed: i.completed || false,
       }))),
     });
   } catch (err) {
@@ -179,6 +181,8 @@ exports.upsertEntry = async (req, res) => {
         isLocked: i.is_locked,
         sortOrder: i.sort_order,
         colour: i.colour,
+        projectId: i.project_id || null,
+        completed: i.completed || false,
       }))),
     });
   } catch (err) {
