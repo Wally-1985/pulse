@@ -1,12 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { entriesApi } from '../../api';
-import { projectsApi } from '../../api';
+import { entriesApi, projectsApi, tasksApi } from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import TimeBar, { formatTime, formatPct } from '../../components/TimeBar';
 import ZendeskActivity from '../../components/ZendeskActivity';
 import OngoingTasks from '../../components/OngoingTasks';
-import { tasksApi } from '../../api';
 import { Button, Select, Badge, Spinner } from '../../components/ui';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import toast from 'react-hot-toast';
