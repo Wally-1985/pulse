@@ -467,22 +467,29 @@ function WorkItemRow({ item, index, totalMinutes, readOnly, projects = [], onUpd
               )}
             </>
           )}
-          <span className="text-xs text-[var(--pulse-muted)] font-mono opacity-70">
-            {formatPct(item.timeMinutes, totalMinutes)} · {formatTime(item.timeMinutes)}
-          </span>
         </div>
 
-        {/* Completed checkbox */}
+        {/* Completed checkbox + time */}
         {!readOnly && (
-          <label className="flex items-center gap-1.5 shrink-0 cursor-pointer" title="Mark as completed">
-            <input
-              type="checkbox"
-              checked={!!item.completed}
-              onChange={(e) => onUpdate('completed', e.target.checked)}
-              className="accent-[var(--pulse-accent)]"
-            />
-            <span className="text-[10px] text-[var(--pulse-muted)]">Completed</span>
-          </label>
+          <div className="flex flex-col items-center gap-0.5 shrink-0">
+            <label className="flex items-center gap-1.5 cursor-pointer" title="Mark as completed">
+              <input
+                type="checkbox"
+                checked={!!item.completed}
+                onChange={(e) => onUpdate('completed', e.target.checked)}
+                className="accent-[var(--pulse-accent)]"
+              />
+              <span className="text-[10px] text-[var(--pulse-muted)]">Completed</span>
+            </label>
+            <span className="text-xs text-[var(--pulse-muted)] font-mono opacity-70">
+              {formatPct(item.timeMinutes, totalMinutes)} · {formatTime(item.timeMinutes)}
+            </span>
+          </div>
+        )}
+        {readOnly && (
+          <span className="text-xs text-[var(--pulse-muted)] font-mono opacity-70 shrink-0">
+            {formatPct(item.timeMinutes, totalMinutes)} · {formatTime(item.timeMinutes)}
+          </span>
         )}
 
         {/* Remove button */}
