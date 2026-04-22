@@ -33,11 +33,14 @@ export default function ProjectDetailPage() {
 
   const load = async () => {
     try {
-      const [p, u] = await Promise.all([projectsApi.getProject(id), usersApi.getUsers()]);
+      const p = await projectsApi.getProject(id);
       setProject(p.data);
-      setUsers(u.data);
     } catch { toast.error('Failed to load project'); }
     finally { setLoading(false); }
+    try {
+      const u = await usersApi.getTeamMembers();
+      setUsers(u.data);
+    } catch { /* fail silently */ }
   };
 
   useEffect(() => { load(); }, [id]);

@@ -32,6 +32,19 @@ exports.getUsers = async (req, res) => {
   }
 };
 
+// GET /users/team — all active users visible to authenticated user (for project assignment)
+exports.getTeamMembers = async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT u.id, u.first_name, u.last_name, u.email
+       FROM users u
+       WHERE u.deleted_at IS NULL AND u.is_active = true
+       ORDER BY u.last_name, u.first_name`
+    );
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ error: 'Failed to fetch team members' }); }
+};
+
 // GET /users/archived
 exports.getArchivedUsers = async (req, res) => {
   try {

@@ -29,11 +29,15 @@ export default function ProjectsPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [p, u] = await Promise.all([projectsApi.getProjects(), usersApi.getUsers()]);
+      const p = await projectsApi.getProjects();
       setProjects(p.data);
-      setUsers(u.data);
     } catch { toast.error('Failed to load projects'); }
     finally { setLoading(false); }
+    // Load users for the assign modal
+    try {
+      const u = await usersApi.getTeamMembers();
+      setUsers(u.data);
+    } catch { /* fail silently */ }
   };
 
   useEffect(() => { load(); }, []);
