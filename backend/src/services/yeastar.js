@@ -33,6 +33,8 @@ const isEnabled = async () => {
   return cfg.enabled && cfg.host && cfg.clientId && cfg.clientSecret;
 };
 
+const HEADERS = { 'Content-Type': 'application/json', 'User-Agent': 'OpenAPI' };
+
 const getToken = async (cfg) => {
   const now = Date.now();
 
@@ -41,16 +43,14 @@ const getToken = async (cfg) => {
     return tokenCache.accessToken;
   }
 
-  // Try refresh token if available
+  // Try refresh token if available and not expired (within 24h)
   if (tokenCache.refreshToken && tokenCache.expiresAt > now - 23 * 60 * 60 * 1000) {
     try {
-      const url = `${getBaseUrl(cfg.host)}/openapi/v1.0/get_token`;
-      const res = await axios.post(url, {
-        grant_type: 'refresh_token',
-        client_id: cfg.clientId,
-        refresh_token: tokenCache.refreshToken,
-      }, { timeout: 10000 });
-
+      const url = `${getBaseUrl(cfg.host)}/openapi/v1.0/refresh_token`;
+      const res = await axios.post(url,
+        { refresh_token: tokenCache.refreshToken },
+        { headers: HEADERS, timeout: 10000 }
+      );
       if (res.data.errcode === 0) {
         tokenCache = {
           accessToken: res.data.access_token,
@@ -62,13 +62,12 @@ const getToken = async (cfg) => {
     } catch { /* fall through to full re-auth */ }
   }
 
-  // Full authentication
+  // Full authentication — username = clientId, password = clientSecret
   const url = `${getBaseUrl(cfg.host)}/openapi/v1.0/get_token`;
-  const res = await axios.post(url, {
-    grant_type: 'client_credentials',
-    client_id: cfg.clientId,
-    client_secret: cfg.clientSecret,
-  }, { timeout: 10000 });
+  const res = await axios.post(url,
+    { username: cfg.clientId, password: cfg.clientSecret },
+    { headers: HEADERS, timeout: 10000 }
+  );
 
   if (res.data.errcode !== 0) {
     throw new Error('Yeastar auth failed: ' + res.data.errmsg);
@@ -100,29 +99,16 @@ const getTodayCDR = async (extensionNumber) => {
   const endTime = `${yyyy}-${mm}-${dd} 23:59:59`;
 
   const res = await axios.get(`${getBaseUrl(cfg.host)}/openapi/v1.0/cdr/list`, {
-    params: {
-      access_token: token,
-      start_time: startTime,
-      end_time: endTime,
-      call_from: extensionNumber,
-      page: 1,
-      page_size: 100,
-    },
+    params: { access_token: token, start_time: startTime, end_time: endTime, call_from: extensionNumber, page: 1, page_size: 100 },
+    headers: HEADERS,
     timeout: 15000,
   });
 
   const fromCalls = (res.data.errcode === 0) ? (res.data.data || []) : [];
 
-  // Also fetch calls where they were the callee
   const res2 = await axios.get(`${getBaseUrl(cfg.host)}/openapi/v1.0/cdr/list`, {
-    params: {
-      access_token: token,
-      start_time: startTime,
-      end_time: endTime,
-      call_to: extensionNumber,
-      page: 1,
-      page_size: 100,
-    },
+    params: { access_token: token, start_time: startTime, end_time: endTime, call_to: extensionNumber, page: 1, page_size: 100 },
+    headers: HEADERS,
     timeout: 15000,
   });
 
