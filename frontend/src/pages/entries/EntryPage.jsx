@@ -458,7 +458,7 @@ function WorkItemRow({ item, index, totalMinutes, readOnly, projects = [], onUpd
         {/* Completed checkbox + time — hidden for lunch and meeting */}
         {!readOnly && (
           <div className="flex flex-col items-center gap-0.5 shrink-0">
-            {item.workType !== 'lunch' && item.workType !== 'meeting' && (
+            {item.workType !== 'lunch' && item.workType !== 'meeting' && !item.detail?.startsWith('Zendesk #') && !item.detail?.startsWith('Phone Call:') && (
               <label className="flex items-center gap-1.5 cursor-pointer" title="Mark as completed">
                 <input
                   type="checkbox"
