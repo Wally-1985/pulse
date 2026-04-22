@@ -433,43 +433,44 @@ function WorkItemRow({ item, index, totalMinutes, readOnly, projects = [], onUpd
           )}
         </div>
 
-        {/* Right column: dropdown + time */}
+        {/* Right column: category, project (if project type), time */}
         <div className="flex flex-col items-end gap-1 shrink-0">
           {readOnly ? (
-            <Badge variant="default">{WORK_TYPES.find(t => t.value === item.workType)?.label || item.workType}</Badge>
+            <>
+              <Badge variant="default">{WORK_TYPES.find(t => t.value === item.workType)?.label || item.workType}</Badge>
+              {item.projectId && projects.length > 0 && (
+                <span className="text-[10px] text-[var(--pulse-accent)] truncate max-w-32">
+                  {projects.find(p => p.id === item.projectId)?.name || ''}
+                </span>
+              )}
+            </>
           ) : (
-            <select
-              value={item.workType}
-              onChange={(e) => onUpdate("workType", e.target.value)}
-              className="text-xs bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-md px-2 py-1 text-[var(--pulse-muted)] focus:outline-none focus:border-[var(--pulse-accent)] cursor-pointer"
-            >
-              {WORK_TYPES.map(t => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
+            <>
+              <select
+                value={item.workType}
+                onChange={(e) => onUpdate("workType", e.target.value)}
+                className="text-xs bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-md px-2 py-1 text-[var(--pulse-muted)] focus:outline-none focus:border-[var(--pulse-accent)] cursor-pointer"
+              >
+                {WORK_TYPES.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+              {item.workType === 'project' && projects.length > 0 && (
+                <select
+                  value={item.projectId || ''}
+                  onChange={(e) => onUpdate('projectId', e.target.value || null)}
+                  className="text-xs bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-md px-2 py-1 text-[var(--pulse-muted)] focus:outline-none focus:border-[var(--pulse-accent)] cursor-pointer max-w-36"
+                >
+                  <option value="">Select project...</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              )}
+            </>
           )}
           <span className="text-xs text-[var(--pulse-muted)] font-mono opacity-70">
             {formatPct(item.timeMinutes, totalMinutes)} · {formatTime(item.timeMinutes)}
           </span>
         </div>
-
-          {/* Project link */}
-          {!readOnly && projects.length > 0 && (
-            <select
-              value={item.projectId || ''}
-              onChange={(e) => onUpdate('projectId', e.target.value || null)}
-              className="text-xs bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-md px-2 py-1 text-[var(--pulse-muted)] focus:outline-none focus:border-[var(--pulse-accent)] cursor-pointer max-w-32"
-              title="Link to project"
-            >
-              <option value="">No project</option>
-              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          )}
-          {readOnly && item.projectId && projects.length > 0 && (
-            <span className="text-xs text-[var(--pulse-accent)] truncate max-w-32">
-              {projects.find(p => p.id === item.projectId)?.name || ''}
-            </span>
-          )}
 
         {/* Completed checkbox */}
         {!readOnly && (
@@ -480,7 +481,7 @@ function WorkItemRow({ item, index, totalMinutes, readOnly, projects = [], onUpd
               onChange={(e) => onUpdate('completed', e.target.checked)}
               className="accent-[var(--pulse-accent)]"
             />
-            <span className="text-[10px] text-[var(--pulse-muted)]">Done</span>
+            <span className="text-[10px] text-[var(--pulse-muted)]">Completed</span>
           </label>
         )}
 
