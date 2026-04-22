@@ -52,7 +52,6 @@ export default function ProjectDetailPage() {
     catch { toast.error('Failed to add task'); }
     finally { setAddingTask(false); }
   };
-
   const handleTaskStatus = async (taskId, status) => {
     try {
       await projectsApi.updateTask(id, taskId, { status });
@@ -132,7 +131,9 @@ export default function ProjectDetailPage() {
                     onChange={() => handleTaskStatus(task.id, task.status === 'completed' ? 'not_started' : 'completed')}
                     className="accent-[var(--pulse-accent)] shrink-0" />
                   <p className={'text-sm flex-1 ' + (task.status === 'completed' ? 'line-through text-[var(--pulse-muted)]' : '')}>{task.title}</p>
-                  {task.due_date && <span className="text-xs text-[var(--pulse-muted)] shrink-0">{new Date(task.due_date + 'T12:00:00').toLocaleDateString()}</span>}
+                  {task.start_date && <span className="text-[10px] text-[var(--pulse-muted)] shrink-0">Start: {new Date(task.start_date + 'T12:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}</span>}
+                  {task.due_date && <span className={'text-[10px] shrink-0 ' + (new Date(task.due_date+'T23:59:59') < new Date() && task.status !== 'completed' ? 'text-red-400 font-medium' : 'text-[var(--pulse-muted)]')}>Due: {new Date(task.due_date + 'T12:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}</span>}
+                  {task.finished_date && <span className="text-[10px] text-green-400 shrink-0">Done: {new Date(task.finished_date + 'T12:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}</span>}
                   <select value={task.status} onChange={e => handleTaskStatus(task.id, e.target.value)}
                     className="text-xs bg-transparent border border-[var(--pulse-border)] rounded px-1.5 py-0.5 text-[var(--pulse-text)] shrink-0 opacity-0 group-hover:opacity-100">
                     {TASK_STATUS.map(s => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
@@ -196,6 +197,9 @@ export default function ProjectDetailPage() {
             <div className="flex flex-col gap-2 text-xs">
               <div><span className="text-[var(--pulse-muted)]">Created by</span><p className="font-medium mt-0.5">{project.created_by_name}</p></div>
               <div><span className="text-[var(--pulse-muted)]">Created</span><p className="font-medium mt-0.5">{new Date(project.created_at).toLocaleDateString()}</p></div>
+              {project.start_date && <div><span className="text-[var(--pulse-muted)]">Started</span><p className="font-medium mt-0.5">{new Date(project.start_date + 'T12:00:00').toLocaleDateString()}</p></div>}
+              {project.due_date && <div><span className={'text-[var(--pulse-muted)]' + (new Date(project.due_date+'T23:59:59') < new Date() && project.status !== 'completed' ? ' text-red-400' : '')}>Due</span><p className={'font-medium mt-0.5' + (new Date(project.due_date+'T23:59:59') < new Date() && project.status !== 'completed' ? ' text-red-400' : '')}>{new Date(project.due_date + 'T12:00:00').toLocaleDateString()}</p></div>}
+              {project.finished_date && <div><span className="text-[var(--pulse-muted)]">Finished</span><p className="font-medium mt-0.5">{new Date(project.finished_date + 'T12:00:00').toLocaleDateString()}</p></div>}
               {project.last_activity_at && <div><span className="text-[var(--pulse-muted)]">Last activity</span><p className="font-medium mt-0.5">{new Date(project.last_activity_at).toLocaleString()}</p></div>}
             </div>
           </Card>

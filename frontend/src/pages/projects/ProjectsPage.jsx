@@ -122,14 +122,14 @@ export default function ProjectsPage() {
 
 export function ProjectModal({ open, onClose, project, users, onSave }) {
   const isEdit = !!project;
-  const [form, setForm] = useState({ name: '', description: '', status: 'not_started', priority: '', assignedUserIds: [] });
+  const [form, setForm] = useState({ name: '', description: '', status: 'not_started', priority: '', assignedUserIds: [], startDate: '', dueDate: '', dueDateChangeReason: '' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (project) {
-      setForm({ name: project.name || '', description: project.description || '', status: project.status || 'not_started', priority: project.priority || '', assignedUserIds: (project.assignments || []).map(a => a.user_id) });
+      setForm({ name: project.name || '', description: project.description || '', status: project.status || 'not_started', priority: project.priority || '', assignedUserIds: (project.assignments || []).map(a => a.user_id), startDate: project.start_date || '', dueDate: project.due_date || '', dueDateChangeReason: '', _originalDueDate: project.due_date || '' });
     } else {
-      setForm({ name: '', description: '', status: 'not_started', priority: '', assignedUserIds: [] });
+      setForm({ name: '', description: '', status: 'not_started', priority: '', assignedUserIds: [], startDate: '', dueDate: '', dueDateChangeReason: '' });
     }
   }, [project, open]);
 
@@ -174,6 +174,22 @@ export function ProjectModal({ open, onClose, project, users, onSave }) {
             </div>
           )}
         </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium">Start Date</label>
+            <input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
+              className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-2 text-sm text-[var(--pulse-text)]" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium">Due Date</label>
+            <input type="date" value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))}
+              className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-2 text-sm text-[var(--pulse-text)]" />
+          </div>
+        </div>
+        {isEdit && form.dueDate !== (form._originalDueDate || '') && (
+          <Input label="Reason for due date change" placeholder="Required when changing or removing the due date"
+            value={form.dueDateChangeReason} onChange={e => setForm(f => ({ ...f, dueDateChangeReason: e.target.value }))} />
+        )}
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium">Assigned To</label>
           <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto p-2 bg-[var(--pulse-surface-2)] rounded-lg border border-[var(--pulse-border)]">

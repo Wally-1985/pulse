@@ -423,6 +423,25 @@ const migrate = async () => {
     await client.query(`ALTER TABLE work_items ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES projects(id) ON DELETE SET NULL`);
     await client.query(`ALTER TABLE work_items ADD COLUMN IF NOT EXISTS completed BOOLEAN DEFAULT false`);
 
+    // Project and task dates
+    await client.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS start_date DATE DEFAULT NULL`);
+    await client.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS due_date DATE DEFAULT NULL`);
+    await client.query(`ALTER TABLE projects ADD COLUMN IF NOT EXISTS finished_date DATE DEFAULT NULL`);
+    await client.query(`ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS start_date DATE DEFAULT NULL`);
+    await client.query(`ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS finished_date DATE DEFAULT NULL`);
+
+    // Due date change audit log
+    await client.query(`CREATE TABLE IF NOT EXISTS project_due_date_changes (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
+      task_id UUID REFERENCES project_tasks(id) ON DELETE CASCADE,
+      old_due_date DATE,
+      new_due_date DATE,
+      reason TEXT NOT NULL,
+      changed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+      changed_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+
     await client.query(`CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status) WHERE deleted_at IS NULL`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_project_tasks_project ON project_tasks(project_id) WHERE deleted_at IS NULL`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_project_notes_project ON project_notes(project_id)`);

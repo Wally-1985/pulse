@@ -152,6 +152,7 @@ export const yeastarApi = {
 
 export const projectsApi = {
   getProjects: () => api.get('/projects'),
+  getActiveProjects: () => api.get('/projects/active'),
   getProject: (id) => api.get('/projects/' + id),
   createProject: (data) => api.post('/projects', data),
   updateProject: (id, data) => api.put('/projects/' + id, data),
@@ -159,6 +160,8 @@ export const projectsApi = {
   createTask: (projectId, data) => api.post('/projects/' + projectId + '/tasks', data),
   updateTask: (projectId, taskId, data) => api.put('/projects/' + projectId + '/tasks/' + taskId, data),
   deleteTask: (projectId, taskId) => api.delete('/projects/' + projectId + '/tasks/' + taskId),
+  completeTaskFromEntry: (projectId, taskId, data) => api.put('/projects/' + projectId + '/tasks/' + taskId + '/complete-from-entry', data),
+  startProjectFromEntry: (projectId, data) => api.put('/projects/' + projectId + '/start-from-entry', data),
   createNote: (projectId, data) => api.post('/projects/' + projectId + '/notes', data),
   deleteNote: (projectId, noteId) => api.delete('/projects/' + projectId + '/notes/' + noteId),
 };

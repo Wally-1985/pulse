@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import TimeBar, { formatTime, formatPct } from '../../components/TimeBar';
 import ZendeskActivity from '../../components/ZendeskActivity';
 import OngoingTasks from '../../components/OngoingTasks';
+import ActiveProjectsPanel from '../../components/ActiveProjectsPanel';
 import YeastarActivity from '../../components/YeastarActivity';
 import { Button, Select, Badge, Spinner } from '../../components/ui';
 import { usePageTitle } from '../../hooks/usePageTitle';
@@ -219,7 +220,18 @@ export default function EntryPage() {
   const totalAllocated = workItems.reduce((s, i) => s + i.timeMinutes, 0);
 
   return (
-    <div className="max-w-5xl mx-auto flex gap-6 items-start">
+    <div className="max-w-6xl mx-auto flex gap-5 items-start">
+
+      {/* Left column — Ongoing Tasks */}
+      <div className="w-60 shrink-0 sticky top-20">
+        <OngoingTasks
+          readOnly={!canEdit}
+          onAddWorkItem={canEdit ? (item) => {
+            const newItem = { id: ('temp_' + Date.now()), detail: item.detail, workType: item.workType, timeMinutes: 0, isLocked: false, colour: '', completed: false };
+            updateItems(rebalance(assignColours([...workItems, newItem]), totalMinutes));
+          } : null}
+        />
+      </div>
       {/* Left column - entry form */}
       <div className="flex-1 min-w-0">
         {/* Header */}
@@ -342,7 +354,7 @@ export default function EntryPage() {
       </div>
 
       {/* Right column - activity panels */}
-      <div className="w-72 shrink-0 sticky top-20 flex flex-col gap-3">
+      <div className="w-64 shrink-0 sticky top-20 flex flex-col gap-3">
         <ZendeskActivity
           readOnly={!canEdit}
           entryDate={date}
@@ -361,12 +373,9 @@ export default function EntryPage() {
             updateItems(rebalance(assignColours([...workItems, newItem]), totalMinutes));
           } : null}
         />
-        <OngoingTasks
+        <ActiveProjectsPanel
+          entryDate={date}
           readOnly={!canEdit}
-          onAddWorkItem={canEdit ? (item) => {
-            const newItem = { id: ('temp_' + Date.now()), detail: item.detail, workType: item.workType, timeMinutes: 0, isLocked: false, colour: '', completed: false };
-            updateItems(rebalance(assignColours([...workItems, newItem]), totalMinutes));
-          } : null}
         />
       </div>
     </div>

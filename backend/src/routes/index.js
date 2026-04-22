@@ -121,6 +121,7 @@ router.get('/ai/jobs', authenticate, isAdmin, aiCtrl.getJobs);
 
 // ─── PROJECTS ──────────────────────────────────────────────────────────────
 router.get('/projects', authenticate, projectsCtrl.getProjects);
+router.get('/projects/active', authenticate, projectsCtrl.getActiveProjects);
 router.post('/projects', authenticate, projectsCtrl.createProject);
 router.get('/projects/:id', authenticate, projectsCtrl.getProject);
 router.put('/projects/:id', authenticate, projectsCtrl.updateProject);
@@ -128,6 +129,8 @@ router.delete('/projects/:id', authenticate, projectsCtrl.deleteProject);
 router.post('/projects/:id/tasks', authenticate, projectsCtrl.createTask);
 router.put('/projects/:id/tasks/:taskId', authenticate, projectsCtrl.updateTask);
 router.delete('/projects/:id/tasks/:taskId', authenticate, projectsCtrl.deleteTask);
+router.put('/projects/:id/tasks/:taskId/complete-from-entry', authenticate, projectsCtrl.completeTaskFromEntry);
+router.put('/projects/:id/start-from-entry', authenticate, projectsCtrl.startProjectFromEntry);
 router.post('/projects/:id/notes', authenticate, projectsCtrl.createNote);
 router.delete('/projects/:id/notes/:noteId', authenticate, projectsCtrl.deleteNote);
 
