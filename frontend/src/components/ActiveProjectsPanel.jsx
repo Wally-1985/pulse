@@ -13,11 +13,11 @@ export default function ActiveProjectsPanel({ entryDate, readOnly, onWorkItemAdd
   const navigate = useNavigate();
 
   useEffect(() => {
-    projectsApi.getActiveProjects()
+    projectsApi.getActiveProjects(entryDate)
       .then(r => setProjects(r.data))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [entryDate]);
 
   const handleCompleteTask = async (project, task) => {
     if (readOnly) return;

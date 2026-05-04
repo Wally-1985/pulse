@@ -122,14 +122,14 @@ export default function ProjectsPage() {
 
 export function ProjectModal({ open, onClose, project, users, onSave }) {
   const isEdit = !!project;
-  const [form, setForm] = useState({ name: '', description: '', status: 'not_started', priority: '', assignedUserIds: [], startDate: '', dueDate: '', dueDateChangeReason: '' });
+  const [form, setForm] = useState({ name: '', description: '', status: 'not_started', priority: '', assignedUserIds: [], startDate: '', dueDate: '', finishedDate: '', dueDateChangeReason: '' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (project) {
-      setForm({ name: project.name || '', description: project.description || '', status: project.status || 'not_started', priority: project.priority || '', assignedUserIds: (project.assignments || []).map(a => a.user_id), startDate: project.start_date || '', dueDate: project.due_date || '', dueDateChangeReason: '', _originalDueDate: project.due_date || '' });
+      setForm({ name: project.name || '', description: project.description || '', status: project.status || 'not_started', priority: project.priority || '', assignedUserIds: (project.assignments || []).map(a => a.user_id), startDate: project.start_date || '', dueDate: project.due_date || '', finishedDate: project.finished_date || '', dueDateChangeReason: '', _originalDueDate: project.due_date || '' });
     } else {
-      setForm({ name: '', description: '', status: 'not_started', priority: '', assignedUserIds: [], startDate: '', dueDate: '', dueDateChangeReason: '' });
+      setForm({ name: '', description: '', status: 'not_started', priority: '', assignedUserIds: [], startDate: '', dueDate: '', finishedDate: '', dueDateChangeReason: '' });
     }
   }, [project, open]);
 
@@ -174,15 +174,18 @@ export function ProjectModal({ open, onClose, project, users, onSave }) {
             </div>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium">Start Date</label>
+        <div className="grid grid-cols-3 gap-3">
             <input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
               className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-2 text-sm text-[var(--pulse-text)]" />
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium">Due Date</label>
             <input type="date" value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))}
+              className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-2 text-sm text-[var(--pulse-text)]" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium">Finished Date</label>
+            <input type="date" value={form.finishedDate} onChange={e => setForm(f => ({ ...f, finishedDate: e.target.value }))}
               className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-2 text-sm text-[var(--pulse-text)]" />
           </div>
         </div>

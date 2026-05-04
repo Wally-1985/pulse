@@ -432,6 +432,19 @@ const migrate = async () => {
     await client.query(`ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS assigned_to UUID REFERENCES users(id) ON DELETE SET NULL`);
     await client.query(`ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT NULL`);
 
+    // Subtasks
+    await client.query(`CREATE TABLE IF NOT EXISTS project_subtasks (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      task_id UUID NOT NULL REFERENCES project_tasks(id) ON DELETE CASCADE,
+      title VARCHAR(255) NOT NULL,
+      completed BOOLEAN DEFAULT false,
+      sort_order INTEGER DEFAULT 0,
+      created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_subtasks_task ON project_subtasks(task_id)`);
+
     // Due date change audit log
     await client.query(`CREATE TABLE IF NOT EXISTS project_due_date_changes (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -448,6 +461,9 @@ const migrate = async () => {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_project_tasks_project ON project_tasks(project_id) WHERE deleted_at IS NULL`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_project_notes_project ON project_notes(project_id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_work_items_project ON work_items(project_id) WHERE project_id IS NOT NULL`);
+
+    // completed_at on ongoing_tasks for historical date queries
+    await client.query(`ALTER TABLE ongoing_tasks ADD COLUMN IF NOT EXISTS completed_at DATE DEFAULT NULL`);
 
     await client.query('COMMIT');
     console.log('✅ Migration complete');

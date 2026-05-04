@@ -1,18 +1,20 @@
 const { query } = require('../config/database');
 const { v4: uuidv4 } = require('uuid');
 
-// GET /tasks/ongoing - tasks not completed and not dismissed from before today
+// GET /tasks/ongoing - tasks not completed as of a given date (defaults to today)
 exports.getOngoing = async (req, res) => {
   try {
     const todayLocal = new Date();
-    const dateStr = todayLocal.getFullYear() + '-' + String(todayLocal.getMonth()+1).padStart(2,'0') + '-' + String(todayLocal.getDate()).padStart(2,'0');
+    const todayStr = todayLocal.getFullYear() + '-' + String(todayLocal.getMonth()+1).padStart(2,'0') + '-' + String(todayLocal.getDate()).padStart(2,'0');
+    // Use requested date or today
+    const dateStr = req.query.date || todayStr;
     const result = await query(
-      `SELECT id, detail, work_type, created_date::text, source_entry_id, completed, dismissed
+      `SELECT id, detail, work_type, created_date::text, source_entry_id, completed, dismissed, completed_at::text
        FROM ongoing_tasks
        WHERE user_id = $1
-         AND completed = false
          AND dismissed = false
          AND created_date < $2
+         AND (completed = false OR completed_at IS NULL OR completed_at > $2)
        ORDER BY created_date ASC, created_at ASC`,
       [req.user.id, dateStr]
     );
@@ -45,9 +47,11 @@ exports.createFromWorkItem = async (req, res) => {
 // PUT /tasks/ongoing/:id/complete
 exports.complete = async (req, res) => {
   try {
+    const todayLocal = new Date();
+    const dateStr = todayLocal.getFullYear() + '-' + String(todayLocal.getMonth()+1).padStart(2,'0') + '-' + String(todayLocal.getDate()).padStart(2,'0');
     await query(
-      `UPDATE ongoing_tasks SET completed = true, updated_at = NOW() WHERE id = $1 AND user_id = $2`,
-      [req.params.id, req.user.id]
+      `UPDATE ongoing_tasks SET completed = true, completed_at = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3`,
+      [dateStr, req.params.id, req.user.id]
     );
     res.json({ message: 'Task completed' });
   } catch (err) {
@@ -83,12 +87,12 @@ exports.syncFromEntry = async (req, res) => {
       );
       if (item.completed) {
         if (existing.rows.length) {
-          await query(`UPDATE ongoing_tasks SET completed = true, updated_at = NOW() WHERE id = $1`, [existing.rows[0].id]);
+          await query(`UPDATE ongoing_tasks SET completed = true, completed_at = $1, updated_at = NOW() WHERE id = $2`, [entryDate, existing.rows[0].id]);
         } else {
           await query(
-            `INSERT INTO ongoing_tasks (id, user_id, detail, work_type, created_date, source_entry_id, completed)
-             VALUES ($1, $2, $3, $4, $5, $6, true)`,
-            [uuidv4(), req.user.id, item.detail, item.workType || 'other', entryDate, entryId]
+            `INSERT INTO ongoing_tasks (id, user_id, detail, work_type, created_date, source_entry_id, completed, completed_at)
+             VALUES ($1, $2, $3, $4, $5, $6, true, $7)`,
+            [uuidv4(), req.user.id, item.detail, item.workType || 'other', entryDate, entryId, entryDate]
           );
         }
       } else {

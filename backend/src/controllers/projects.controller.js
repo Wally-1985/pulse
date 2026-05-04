@@ -36,16 +36,21 @@ exports.getProjects = async (req, res) => {
 };
 
 exports.getActiveProjects = async (req, res) => {
+  const dateStr = req.query.date || new Date().toISOString().substring(0, 10);
   try {
     const result = await query(
       `SELECT p.id, p.name, p.status, p.priority, p.start_date, p.due_date,
-              json_agg(json_build_object('id', pt.id, 'title', pt.title, 'status', pt.status, 'due_date', pt.due_date, 'start_date', pt.start_date)
-                ORDER BY pt.sort_order, pt.created_at) FILTER (WHERE pt.id IS NOT NULL AND pt.deleted_at IS NULL AND pt.status != 'completed') as open_tasks
+              json_agg(json_build_object('id', pt.id, 'title', pt.title, 'status', pt.status, 'due_date', pt.due_date, 'start_date', pt.start_date, 'finished_date', pt.finished_date)
+                ORDER BY pt.sort_order, pt.created_at) FILTER (WHERE pt.id IS NOT NULL AND pt.deleted_at IS NULL
+                  AND (pt.finished_date IS NULL OR pt.finished_date > $1)
+                  AND (pt.start_date IS NULL OR pt.start_date <= $1)
+                ) as open_tasks
        FROM projects p
        LEFT JOIN project_tasks pt ON pt.project_id = p.id
        WHERE p.deleted_at IS NULL AND p.status IN ('in_progress', 'high_priority_not_started')
        GROUP BY p.id
-       ORDER BY p.priority NULLS LAST, p.updated_at DESC`
+       ORDER BY p.priority NULLS LAST, p.updated_at DESC`,
+      [dateStr]
     );
     res.json(result.rows.map(p => ({ ...p, open_tasks: p.open_tasks || [] })));
   } catch (err) { res.status(500).json({ error: 'Failed to fetch active projects' }); }
@@ -61,7 +66,21 @@ exports.getProject = async (req, res) => {
       query(`SELECT pdc.*, u.first_name || ' ' || u.last_name as changed_by_name FROM project_due_date_changes pdc LEFT JOIN users u ON u.id = pdc.changed_by WHERE pdc.project_id = $1 AND pdc.task_id IS NULL ORDER BY pdc.changed_at DESC LIMIT 10`, [req.params.id]),
     ]);
     if (!proj.rows.length) return res.status(404).json({ error: 'Project not found' });
-    res.json({ ...proj.rows[0], health: getHealth(proj.rows[0]), tasks: tasks.rows, notes: notes.rows, assignments: assignments.rows, dueDateHistory: history.rows });
+    // Attach subtasks to each task
+    const taskIds = tasks.rows.map(t => t.id);
+    let subtasksByTask = {};
+    if (taskIds.length) {
+      const subtasks = await query(
+        `SELECT * FROM project_subtasks WHERE task_id = ANY($1) ORDER BY sort_order, created_at`,
+        [taskIds]
+      );
+      for (const st of subtasks.rows) {
+        if (!subtasksByTask[st.task_id]) subtasksByTask[st.task_id] = [];
+        subtasksByTask[st.task_id].push(st);
+      }
+    }
+    const tasksWithSubtasks = tasks.rows.map(t => ({ ...t, subtasks: subtasksByTask[t.id] || [] }));
+    res.json({ ...proj.rows[0], health: getHealth(proj.rows[0]), tasks: tasksWithSubtasks, notes: notes.rows, assignments: assignments.rows, dueDateHistory: history.rows });
   } catch (err) { res.status(500).json({ error: 'Failed to fetch project' }); }
 };
 
@@ -101,7 +120,7 @@ exports.updateProject = async (req, res) => {
     await client.query(
       `UPDATE projects SET name=COALESCE($1,name), description=$2, status=COALESCE($3,status), priority=$4,
        start_date=$5, due_date=$6, finished_date=$7, updated_at=NOW() WHERE id=$8 AND deleted_at IS NULL`,
-      [name, description??null, status, priority??null, startDate??null, newDue, finishedDate??null, req.params.id]
+      [name, description||null, status, priority||null, startDate||null, newDue, finishedDate||null, req.params.id]
     );
     if (oldDue !== newDue && dueDateChangeReason?.trim()) {
       await client.query(
@@ -149,12 +168,12 @@ exports.updateTask = async (req, res) => {
     if (oldDue !== newDue && !dueDateChangeReason?.trim()) {
       return res.status(400).json({ error: 'A reason is required when changing or removing the due date' });
     }
-    const finDate = status === 'completed' && !finishedDate ? new Date().toISOString().substring(0,10) : (finishedDate??null);
+    const finDate = status === 'completed' && !finishedDate ? new Date().toISOString().substring(0,10) : (finishedDate || null);
     await query(
       `UPDATE project_tasks SET title=COALESCE($1,title), description=$2, status=COALESCE($3,status),
        due_date=$4, start_date=$5, finished_date=$6, assigned_to=$7, notes=$8, updated_by=$9, updated_at=NOW()
        WHERE id=$10 AND project_id=$11 AND deleted_at IS NULL`,
-      [title, description??null, status, newDue, startDate??null, finDate, assignedTo??null, notes??null, req.user.id, req.params.taskId, req.params.id]
+      [title, description||null, status, newDue, startDate||null, finDate, assignedTo||null, notes||null, req.user.id, req.params.taskId, req.params.id]
     );
     if (oldDue !== newDue && dueDateChangeReason?.trim()) {
       await query(`INSERT INTO project_due_date_changes (id,project_id,task_id,old_due_date,new_due_date,reason,changed_by) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
@@ -215,4 +234,49 @@ exports.startProjectFromEntry = async (req, res) => {
       [entryDate||new Date().toISOString().substring(0,10), req.params.id]);
     res.json({ message: 'OK' });
   } catch (err) { res.status(500).json({ error: 'Failed to set start date' }); }
+};
+
+// ─── SUBTASKS ─────────────────────────────────────────────────────────────────
+
+// GET subtasks for a task (included in getProject via join, but also standalone)
+exports.getSubtasks = async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT st.*, u.first_name || ' ' || u.last_name as created_by_name
+       FROM project_subtasks st LEFT JOIN users u ON u.id = st.created_by
+       WHERE st.task_id = $1 ORDER BY st.sort_order, st.created_at`,
+      [req.params.taskId]
+    );
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ error: 'Failed to fetch subtasks' }); }
+};
+
+// POST /projects/:id/tasks/:taskId/subtasks
+exports.createSubtask = async (req, res) => {
+  const { title } = req.body;
+  if (!title) return res.status(400).json({ error: 'Title required' });
+  const id = uuidv4();
+  try {
+    await query(`INSERT INTO project_subtasks (id, task_id, title, created_by) VALUES ($1,$2,$3,$4)`,
+      [id, req.params.taskId, title, req.user.id]);
+    res.status(201).json({ id });
+  } catch (err) { res.status(500).json({ error: 'Failed to create subtask' }); }
+};
+
+// PUT /projects/:id/tasks/:taskId/subtasks/:subtaskId
+exports.updateSubtask = async (req, res) => {
+  const { title, completed } = req.body;
+  try {
+    await query(`UPDATE project_subtasks SET title=COALESCE($1,title), completed=COALESCE($2,completed), updated_at=NOW() WHERE id=$3 AND task_id=$4`,
+      [title||null, completed??null, req.params.subtaskId, req.params.taskId]);
+    res.json({ message: 'Subtask updated' });
+  } catch (err) { res.status(500).json({ error: 'Failed to update subtask' }); }
+};
+
+// DELETE /projects/:id/tasks/:taskId/subtasks/:subtaskId
+exports.deleteSubtask = async (req, res) => {
+  try {
+    await query(`DELETE FROM project_subtasks WHERE id=$1 AND task_id=$2`, [req.params.subtaskId, req.params.taskId]);
+    res.json({ message: 'Subtask deleted' });
+  } catch (err) { res.status(500).json({ error: 'Failed to delete subtask' }); }
 };

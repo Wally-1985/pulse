@@ -226,6 +226,7 @@ export default function EntryPage() {
       <div className="w-60 shrink-0 sticky top-20">
         <OngoingTasks
           readOnly={!canEdit}
+          entryDate={date}
           onAddWorkItem={canEdit ? (item) => {
             const newItem = { id: ('temp_' + Date.now()), detail: item.detail, workType: item.workType, timeMinutes: 0, isLocked: false, colour: '', completed: false };
             updateItems(rebalance(assignColours([...workItems, newItem]), totalMinutes));

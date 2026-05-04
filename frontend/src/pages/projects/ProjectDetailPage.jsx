@@ -21,6 +21,8 @@ const TASK_STATUSES = [
   { value: 'in_progress', label: 'In Progress' },
   { value: 'completed', label: 'Completed' },
 ];
+const TASK_COLOURS = ['#6366f1','#f59e0b','#10b981','#3b82f6','#ec4899','#8b5cf6','#14b8a6','#f97316','#84cc16','#06b6d4','#ef4444','#a855f7'];
+const taskColour = (id) => TASK_COLOURS[parseInt(id?.replace(/-/g,'').substring(0,8), 16) % TASK_COLOURS.length];
 const fmtDate = (d) => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
 const isOverdue = (d, status) => d && status !== 'completed' && new Date(d + 'T23:59:59') < new Date();
 
@@ -110,29 +112,28 @@ export default function ProjectDetailPage() {
             </div>
             <div className="flex flex-col gap-2 mb-3">
               {project.tasks.length === 0 && <p className="text-xs text-[var(--pulse-muted)] text-center py-3">No tasks yet.</p>}
-              {project.tasks.map(task => (
                 <div key={task.id} onClick={() => setSelectedTask(task)}
                   className="flex items-start gap-2 p-2.5 bg-[var(--pulse-surface-2)] rounded-lg cursor-pointer hover:border hover:border-[var(--pulse-accent)]/30 group transition-all">
-                  <input type="checkbox" checked={task.status === 'completed'}
-                    onClick={e => e.stopPropagation()}
-                    onChange={async (e) => {
-                      e.stopPropagation();
-                      try { await projectsApi.updateTask(id, task.id, { status: e.target.checked ? 'completed' : 'not_started' }); load(); }
-                      catch { toast.error('Failed to update'); }
-                    }}
-                    className="accent-[var(--pulse-accent)] shrink-0 mt-0.5" />
-
+                  <div className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ background: taskColour(task.id) }} />
                   <div className="flex-1 min-w-0">
                     <p className={'text-sm ' + (task.status === 'completed' ? 'line-through text-[var(--pulse-muted)]' : '')}>{task.title}</p>
                     <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-                      {task.assigned_to_name && <span className="text-[10px] text-[var(--pulse-muted)]">👤 {task.assigned_to_name}</span>}
+                      {task.assigned_to_name && <span className="text-[10px] text-[var(--pulse-muted)]">{task.assigned_to_name}</span>}
                       {task.start_date && <span className="text-[10px] text-[var(--pulse-muted)]">Start: {fmtDate(task.start_date)}</span>}
                       {task.due_date && <span className={'text-[10px] ' + (isOverdue(task.due_date, task.status) ? 'text-red-400 font-medium' : 'text-[var(--pulse-muted)]')}>Due: {fmtDate(task.due_date)}</span>}
                       {task.finished_date && <span className="text-[10px] text-green-400">Done: {fmtDate(task.finished_date)}</span>}
                       {task.notes && <span className="text-[10px] text-[var(--pulse-muted)] italic truncate max-w-xs">{task.notes}</span>}
+                      {(task.subtasks||[]).length > 0 && <span className="text-[10px] text-[var(--pulse-muted)]">{(task.subtasks||[]).filter(s=>s.completed).length}/{(task.subtasks||[]).length} subtasks</span>}
                     </div>
                   </div>
-                  <span className="text-[10px] text-[var(--pulse-muted)] opacity-0 group-hover:opacity-100 shrink-0">Edit →</span>
+                  <label className="flex items-center gap-1 shrink-0 cursor-pointer" onClick={e => e.stopPropagation()}>
+                    <span className="text-[10px] text-[var(--pulse-muted)]">Completed</span>
+                    <input type="checkbox" checked={task.status === 'completed'}
+                      onChange={async (e) => { try { await projectsApi.updateTask(id, task.id, { status: e.target.checked ? 'completed' : 'not_started' }); load(); } catch { toast.error('Failed'); } }}
+                      className="accent-[var(--pulse-accent)]" />
+                  </label>
+                  <span className="text-[10px] text-[var(--pulse-muted)] opacity-0 group-hover:opacity-100 shrink-0">Edit</span>
+                </div>
                 </div>
               ))}
             </div>
@@ -225,6 +226,31 @@ function TaskModal({ task, projectId, users, onClose, onSave, onDelete }) {
     _originalDueDate: task.due_date || '',
   });
   const [saving, setSaving] = useState(false);
+  const [subtasks, setSubtasks] = useState(task.subtasks || []);
+  const [newSubtask, setNewSubtask] = useState('');
+
+  const handleAddSubtask = async () => {
+    if (!newSubtask.trim()) return;
+    try {
+      const r = await projectsApi.createSubtask(projectId, task.id, { title: newSubtask });
+      setSubtasks(prev => [...prev, { id: r.data.id, title: newSubtask, completed: false }]);
+      setNewSubtask('');
+    } catch { toast.error('Failed to add subtask'); }
+  };
+
+  const handleSubtaskToggle = async (st) => {
+    try {
+      await projectsApi.updateSubtask(projectId, task.id, st.id, { completed: !st.completed });
+      setSubtasks(prev => prev.map(s => s.id === st.id ? { ...s, completed: !s.completed } : s));
+    } catch { toast.error('Failed'); }
+  };
+
+  const handleSubtaskDelete = async (stId) => {
+    try {
+      await projectsApi.deleteSubtask(projectId, task.id, stId);
+      setSubtasks(prev => prev.filter(s => s.id !== stId));
+    } catch { toast.error('Failed'); }
+  };
   const dueDateChanged = form.dueDate !== form._originalDueDate;
 
   const handleSave = async () => {

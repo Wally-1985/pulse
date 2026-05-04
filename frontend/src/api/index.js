@@ -98,7 +98,7 @@ export const notificationsApi = {
 
 // Ongoing Tasks
 export const tasksApi = {
-  getOngoing: () => api.get('/tasks/ongoing'),
+  getOngoing: (date) => api.get('/tasks/ongoing' + (date ? '?date=' + date : '')),
   create: (data) => api.post('/tasks/ongoing', data),
   sync: (data) => api.post('/tasks/ongoing/sync', data),
   complete: (id) => api.put('/tasks/ongoing/' + id + '/complete'),
@@ -152,7 +152,7 @@ export const yeastarApi = {
 
 export const projectsApi = {
   getProjects: () => api.get('/projects'),
-  getActiveProjects: () => api.get('/projects/active'),
+  getActiveProjects: (date) => api.get('/projects/active' + (date ? '?date=' + date : '')),
   getProject: (id) => api.get('/projects/' + id),
   createProject: (data) => api.post('/projects', data),
   updateProject: (id, data) => api.put('/projects/' + id, data),
@@ -164,4 +164,7 @@ export const projectsApi = {
   startProjectFromEntry: (projectId, data) => api.put('/projects/' + projectId + '/start-from-entry', data),
   createNote: (projectId, data) => api.post('/projects/' + projectId + '/notes', data),
   deleteNote: (projectId, noteId) => api.delete('/projects/' + projectId + '/notes/' + noteId),
+  createSubtask: (projectId, taskId, data) => api.post('/projects/' + projectId + '/tasks/' + taskId + '/subtasks', data),
+  updateSubtask: (projectId, taskId, subtaskId, data) => api.put('/projects/' + projectId + '/tasks/' + taskId + '/subtasks/' + subtaskId, data),
+  deleteSubtask: (projectId, taskId, subtaskId) => api.delete('/projects/' + projectId + '/tasks/' + taskId + '/subtasks/' + subtaskId),
 };

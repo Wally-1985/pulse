@@ -11,19 +11,19 @@ const WORK_TYPE_COLOURS = {
   other: '#8b5cf6',
 };
 
-export default function OngoingTasks({ onAddWorkItem, readOnly }) {
+export default function OngoingTasks({ onAddWorkItem, readOnly, entryDate }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const load = () => {
     setLoading(true);
-    tasksApi.getOngoing()
+    tasksApi.getOngoing(entryDate)
       .then(r => setTasks(r.data))
       .catch(() => setTasks([]))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [entryDate]);
 
   const handleDismiss = async (id) => {
     try {

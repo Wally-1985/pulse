@@ -131,6 +131,10 @@ router.put('/projects/:id/tasks/:taskId', authenticate, projectsCtrl.updateTask)
 router.delete('/projects/:id/tasks/:taskId', authenticate, projectsCtrl.deleteTask);
 router.put('/projects/:id/tasks/:taskId/complete-from-entry', authenticate, projectsCtrl.completeTaskFromEntry);
 router.put('/projects/:id/start-from-entry', authenticate, projectsCtrl.startProjectFromEntry);
+router.get('/projects/:id/tasks/:taskId/subtasks', authenticate, projectsCtrl.getSubtasks);
+router.post('/projects/:id/tasks/:taskId/subtasks', authenticate, projectsCtrl.createSubtask);
+router.put('/projects/:id/tasks/:taskId/subtasks/:subtaskId', authenticate, projectsCtrl.updateSubtask);
+router.delete('/projects/:id/tasks/:taskId/subtasks/:subtaskId', authenticate, projectsCtrl.deleteSubtask);
 router.post('/projects/:id/notes', authenticate, projectsCtrl.createNote);
 router.delete('/projects/:id/notes/:noteId', authenticate, projectsCtrl.deleteNote);
 
