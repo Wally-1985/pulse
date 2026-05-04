@@ -80,10 +80,12 @@ exports.getTodayActivity = async (req, res) => {
     })();
     const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-    // Run targeted searches to find tickets this user specifically touched
+    // Run targeted searches to find tickets this user specifically touched today
     const searches = [
-      'type:ticket commenter:' + email + ' updated>=' + dateStr,  // tickets they commented on
-      'type:ticket requester:' + email + ' created>=' + dateStr,  // tickets they created
+      'type:ticket commenter:' + email + ' updated>=' + dateStr,   // commented on
+      'type:ticket requester:' + email + ' created>=' + dateStr,   // created
+      'type:ticket assignee:' + email + ' updated>=' + dateStr,    // assigned to them and updated today
+      'type:ticket submitter:' + email + ' updated>=' + dateStr,   // submitted by them
     ];
 
     // Collect unique ticket IDs across all searches
@@ -121,24 +123,27 @@ exports.getTodayActivity = async (req, res) => {
             if (event.type === 'Change' && event.field_name === 'status') {
               const toStatus = event.value;
               const fromStatus = event.previous_value;
-              if (['new', 'open', 'solved', 'pending'].includes(toStatus)) {
-                activities.push('Status → ' + toStatus.charAt(0).toUpperCase() + toStatus.slice(1));
-              }
-              if (['solved', 'closed'].includes(fromStatus) && toStatus === 'open') {
-                activities.push('Reopened');
-              }
+              if (toStatus === 'solved') activities.push('Solved');
+              else if (toStatus === 'open' && ['solved','closed'].includes(fromStatus)) activities.push('Reopened');
+              else if (['new','open','pending','hold'].includes(toStatus)) activities.push('Status → ' + toStatus.charAt(0).toUpperCase() + toStatus.slice(1));
             }
+            if (event.type === 'Change' && event.field_name === 'assignee_id') activities.push('Reassigned');
+            if (event.type === 'Change' && event.field_name === 'priority') activities.push('Priority → ' + (event.value || 'none'));
+            if (event.type === 'Change' && event.field_name === 'tags') activities.push('Tags Updated');
           }
         }
 
         const uniqueActivities = [...new Set(activities)];
-        if (uniqueActivities.length > 0) {
+        // Show ticket if user did something, OR if they are the assignee and it was updated today
+        const isAssignee = ticket.assignee_id && String(ticket.assignee_id) === String(zendeskUserId);
+        const updatedToday = ticket.updated_at && ticket.updated_at.substring(0,10) === dateStr;
+        if (uniqueActivities.length > 0 || (isAssignee && updatedToday)) {
           ticketActivity.push({
             id: ticket.id,
             url: 'https://' + subdomain + '.zendesk.com/agent/tickets/' + ticket.id,
             subject: ticket.subject || 'Ticket #' + ticket.id,
             status: ticket.status,
-            replyType: uniqueActivities.join(' · '),
+            replyType: uniqueActivities.length > 0 ? uniqueActivities.join(' · ') : 'Assigned',
           });
         }
       } catch(e) { console.error('Audits error ticket ' + ticket.id + ':', e.message); }
