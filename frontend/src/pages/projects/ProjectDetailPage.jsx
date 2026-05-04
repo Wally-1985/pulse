@@ -22,10 +22,9 @@ const TASK_STATUSES = [
   { value: 'completed', label: 'Completed' },
 ];
 const TASK_COLOURS = ['#6366f1','#f59e0b','#10b981','#3b82f6','#ec4899','#8b5cf6','#14b8a6','#f97316','#84cc16','#06b6d4','#ef4444','#a855f7'];
-const taskColour = (id) => TASK_COLOURS[parseInt(id?.replace(/-/g,'').substring(0,8), 16) % TASK_COLOURS.length];
+const taskColour = (id) => TASK_COLOURS[parseInt((id||'').replace(/-/g,'').substring(0,8), 16) % TASK_COLOURS.length];
 const fmtDate = (d) => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) : null;
 const isOverdue = (d, status) => d && status !== 'completed' && new Date(d + 'T23:59:59') < new Date();
-
 export default function ProjectDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -86,9 +85,10 @@ export default function ProjectDetailPage() {
     <div className="max-w-4xl mx-auto">
       <div className="flex items-start justify-between mb-6 gap-4">
         <div>
-          <button onClick={() => navigate('/projects')} className="text-xs text-[var(--pulse-muted)] hover:text-[var(--pulse-accent)] mb-2 block">← All Projects</button>
+          <button onClick={() => navigate('/projects')} className="text-xs text-[var(--pulse-muted)] hover:text-[var(--pulse-accent)] mb-2 block">
+            Back to Projects
+          </button>
           <h1 className="text-xl font-semibold">{project.name}</h1>
-
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             <Badge variant={STATUS_COLOURS[project.status] || 'default'}>{statusLabel}</Badge>
             {project.status === 'in_progress' && project.priority && <Badge variant="warning">Priority {project.priority}</Badge>}
@@ -112,13 +112,14 @@ export default function ProjectDetailPage() {
             </div>
             <div className="flex flex-col gap-2 mb-3">
               {project.tasks.length === 0 && <p className="text-xs text-[var(--pulse-muted)] text-center py-3">No tasks yet.</p>}
+              {project.tasks.map(task => (
                 <div key={task.id} onClick={() => setSelectedTask(task)}
                   className="flex items-start gap-2 p-2.5 bg-[var(--pulse-surface-2)] rounded-lg cursor-pointer hover:border hover:border-[var(--pulse-accent)]/30 group transition-all">
                   <div className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ background: taskColour(task.id) }} />
                   <div className="flex-1 min-w-0">
                     <p className={'text-sm ' + (task.status === 'completed' ? 'line-through text-[var(--pulse-muted)]' : '')}>{task.title}</p>
                     <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-                      {task.assigned_to_name && <span className="text-[10px] text-[var(--pulse-muted)]">{task.assigned_to_name}</span>}
+                      {task.assigned_to_name && <span className="text-[10px] text-[var(--pulse-muted)]">👤 {task.assigned_to_name}</span>}
                       {task.start_date && <span className="text-[10px] text-[var(--pulse-muted)]">Start: {fmtDate(task.start_date)}</span>}
                       {task.due_date && <span className={'text-[10px] ' + (isOverdue(task.due_date, task.status) ? 'text-red-400 font-medium' : 'text-[var(--pulse-muted)]')}>Due: {fmtDate(task.due_date)}</span>}
                       {task.finished_date && <span className="text-[10px] text-green-400">Done: {fmtDate(task.finished_date)}</span>}
@@ -129,11 +130,13 @@ export default function ProjectDetailPage() {
                   <label className="flex items-center gap-1 shrink-0 cursor-pointer" onClick={e => e.stopPropagation()}>
                     <span className="text-[10px] text-[var(--pulse-muted)]">Completed</span>
                     <input type="checkbox" checked={task.status === 'completed'}
-                      onChange={async (e) => { try { await projectsApi.updateTask(id, task.id, { status: e.target.checked ? 'completed' : 'not_started' }); load(); } catch { toast.error('Failed'); } }}
+                      onChange={async (e) => {
+                        try { await projectsApi.updateTask(id, task.id, { status: e.target.checked ? 'completed' : 'not_started' }); load(); }
+                        catch { toast.error('Failed to update'); }
+                      }}
                       className="accent-[var(--pulse-accent)]" />
                   </label>
                   <span className="text-[10px] text-[var(--pulse-muted)] opacity-0 group-hover:opacity-100 shrink-0">Edit</span>
-                </div>
                 </div>
               ))}
             </div>
@@ -152,10 +155,11 @@ export default function ProjectDetailPage() {
                 <div key={note.id} className="p-3 bg-[var(--pulse-surface-2)] rounded-lg group">
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm flex-1 whitespace-pre-wrap">{note.note_text}</p>
-
                     <button onClick={() => handleDeleteNote(note.id)}
                       className="text-[var(--pulse-muted)] hover:text-red-400 shrink-0 opacity-0 group-hover:opacity-100 mt-0.5">
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
                     </button>
                   </div>
                   <p className="text-xs text-[var(--pulse-muted)] mt-1">{note.created_by_name} · {new Date(note.created_at).toLocaleString()}</p>
@@ -177,20 +181,27 @@ export default function ProjectDetailPage() {
             <div className="flex flex-col gap-2">
               {project.assignments.map(a => (
                 <div key={a.user_id} className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-[var(--pulse-accent)] flex items-center justify-center text-white text-[10px] font-bold shrink-0">{a.first_name[0]}{a.last_name[0]}</div>
+                  <div className="w-6 h-6 rounded-full bg-[var(--pulse-accent)] flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                    {a.first_name[0]}{a.last_name[0]}
+                  </div>
                   <p className="text-xs">{a.first_name} {a.last_name}</p>
                 </div>
               ))}
             </div>
           </Card>
+
           <Card className="p-4">
             <h3 className="text-xs font-semibold text-[var(--pulse-muted)] uppercase tracking-wide mb-3">Details</h3>
             <div className="flex flex-col gap-2 text-xs">
               <div><span className="text-[var(--pulse-muted)]">Created by</span><p className="font-medium mt-0.5">{project.created_by_name}</p></div>
               <div><span className="text-[var(--pulse-muted)]">Created</span><p className="font-medium mt-0.5">{new Date(project.created_at).toLocaleDateString()}</p></div>
-
               {project.start_date && <div><span className="text-[var(--pulse-muted)]">Started</span><p className="font-medium mt-0.5">{fmtDate(project.start_date)}</p></div>}
-              {project.due_date && <div><span className={isOverdue(project.due_date, project.status) ? 'text-red-400' : 'text-[var(--pulse-muted)]'}>Due</span><p className={'font-medium mt-0.5 ' + (isOverdue(project.due_date, project.status) ? 'text-red-400' : '')}>{fmtDate(project.due_date)}</p></div>}
+              {project.due_date && (
+                <div>
+                  <span className={isOverdue(project.due_date, project.status) ? 'text-red-400' : 'text-[var(--pulse-muted)]'}>Due</span>
+                  <p className={'font-medium mt-0.5 ' + (isOverdue(project.due_date, project.status) ? 'text-red-400' : '')}>{fmtDate(project.due_date)}</p>
+                </div>
+              )}
               {project.finished_date && <div><span className="text-[var(--pulse-muted)]">Finished</span><p className="font-medium mt-0.5">{fmtDate(project.finished_date)}</p></div>}
               {project.last_activity_at && <div><span className="text-[var(--pulse-muted)]">Last activity</span><p className="font-medium mt-0.5">{new Date(project.last_activity_at).toLocaleString()}</p></div>}
             </div>
@@ -228,6 +239,7 @@ function TaskModal({ task, projectId, users, onClose, onSave, onDelete }) {
   const [saving, setSaving] = useState(false);
   const [subtasks, setSubtasks] = useState(task.subtasks || []);
   const [newSubtask, setNewSubtask] = useState('');
+  const dueDateChanged = form.dueDate !== form._originalDueDate;
 
   const handleAddSubtask = async () => {
     if (!newSubtask.trim()) return;
@@ -242,16 +254,15 @@ function TaskModal({ task, projectId, users, onClose, onSave, onDelete }) {
     try {
       await projectsApi.updateSubtask(projectId, task.id, st.id, { completed: !st.completed });
       setSubtasks(prev => prev.map(s => s.id === st.id ? { ...s, completed: !s.completed } : s));
-    } catch { toast.error('Failed'); }
+    } catch { toast.error('Failed to update subtask'); }
   };
 
   const handleSubtaskDelete = async (stId) => {
     try {
       await projectsApi.deleteSubtask(projectId, task.id, stId);
       setSubtasks(prev => prev.filter(s => s.id !== stId));
-    } catch { toast.error('Failed'); }
+    } catch { toast.error('Failed to delete subtask'); }
   };
-  const dueDateChanged = form.dueDate !== form._originalDueDate;
 
   const handleSave = async () => {
     if (dueDateChanged && !form.dueDateChangeReason.trim()) {
@@ -275,6 +286,7 @@ function TaskModal({ task, projectId, users, onClose, onSave, onDelete }) {
     <Modal open={true} onClose={onClose} title="Edit Task" size="md">
       <div className="flex flex-col gap-4">
         <Input label="Task Title" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
+
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium">Status</label>
@@ -292,6 +304,7 @@ function TaskModal({ task, projectId, users, onClose, onSave, onDelete }) {
             </select>
           </div>
         </div>
+
         <div className="grid grid-cols-3 gap-3">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium">Start Date</label>
@@ -303,28 +316,60 @@ function TaskModal({ task, projectId, users, onClose, onSave, onDelete }) {
             <input type="date" value={form.dueDate} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))}
               className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-2 text-sm text-[var(--pulse-text)]" />
           </div>
-
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium">Finished Date</label>
             <input type="date" value={form.finishedDate} onChange={e => setForm(f => ({ ...f, finishedDate: e.target.value }))}
               className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-2 text-sm text-[var(--pulse-text)]" />
           </div>
         </div>
+
         {dueDateChanged && (
           <Input label="Reason for due date change" required
             placeholder="Required — why is the due date being changed or removed?"
             value={form.dueDateChangeReason}
             onChange={e => setForm(f => ({ ...f, dueDateChangeReason: e.target.value }))} />
         )}
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium">Subtasks</label>
+          <div className="flex flex-col gap-1.5">
+            {subtasks.map(st => (
+              <div key={st.id} className="flex items-center gap-2 px-2 py-1.5 bg-[var(--pulse-surface-2)] rounded-lg group">
+                <input type="checkbox" checked={st.completed} onChange={() => handleSubtaskToggle(st)} className="accent-[var(--pulse-accent)] shrink-0" />
+                <span className={'text-xs flex-1 ' + (st.completed ? 'line-through text-[var(--pulse-muted)]' : '')}>{st.title}</span>
+                <button onClick={() => handleSubtaskDelete(st.id)} className="text-[var(--pulse-muted)] hover:text-red-400 opacity-0 group-hover:opacity-100 shrink-0">
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+            <div className="flex gap-2 mt-1">
+              <input value={newSubtask} onChange={e => setNewSubtask(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAddSubtask()}
+                placeholder="Add a subtask..."
+                className="flex-1 bg-[var(--pulse-surface)] border border-[var(--pulse-border)] rounded-lg px-2 py-1 text-xs text-[var(--pulse-text)]" />
+              <button onClick={handleAddSubtask}
+                className="text-xs px-2 py-1 rounded-lg bg-[var(--pulse-accent-soft)] text-[var(--pulse-accent)] hover:bg-[var(--pulse-accent)] hover:text-white transition-colors">
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium">Notes</label>
           <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-            rows={4} placeholder="Task notes, context, decisions..."
+            rows={3} placeholder="Task notes, context, decisions..."
             className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-2 text-sm text-[var(--pulse-text)] resize-y" />
         </div>
+
         <div className="flex items-center justify-between pt-2">
           <Button size="sm" variant="danger"
-            onClick={async () => { if (!confirm('Delete this task?')) return; try { await onDelete(task.id); } catch { toast.error('Failed'); } }}>
+            onClick={async () => {
+              if (!confirm('Delete this task?')) return;
+              try { await onDelete(task.id); } catch { toast.error('Failed to delete task'); }
+            }}>
             Delete Task
           </Button>
           <div className="flex gap-2">
