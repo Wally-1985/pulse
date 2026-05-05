@@ -6,15 +6,22 @@ exports.getOngoing = async (req, res) => {
   try {
     const todayLocal = new Date();
     const todayStr = todayLocal.getFullYear() + '-' + String(todayLocal.getMonth()+1).padStart(2,'0') + '-' + String(todayLocal.getDate()).padStart(2,'0');
-    // Use requested date or today
     const dateStr = req.query.date || todayStr;
+    const isToday = dateStr === todayStr;
     const result = await query(
       `SELECT id, detail, work_type, created_date::text, source_entry_id, completed, dismissed, completed_at::text
        FROM ongoing_tasks
        WHERE user_id = $1
          AND dismissed = false
          AND created_date < $2
-         AND (completed = false OR completed_at IS NULL OR completed_at > $2)
+         AND (
+           completed = false
+           OR (
+             completed = true
+             AND completed_at IS NOT NULL
+             AND completed_at > $2
+           )
+         )
        ORDER BY created_date ASC, created_at ASC`,
       [req.user.id, dateStr]
     );
@@ -77,7 +84,6 @@ exports.syncFromEntry = async (req, res) => {
   const { entryId, workItems, entryDate } = req.body;
   try {
     for (const item of (workItems || [])) {
-      // Never carry forward lunch, meeting, or Zendesk/Yeastar items
       const skipTypes = ['lunch', 'meeting'];
       if (skipTypes.includes(item.workType)) continue;
       if (item.detail && (item.detail.startsWith('Zendesk #') || item.detail.startsWith('Phone Call:'))) continue;
@@ -87,7 +93,10 @@ exports.syncFromEntry = async (req, res) => {
       );
       if (item.completed) {
         if (existing.rows.length) {
-          await query(`UPDATE ongoing_tasks SET completed = true, completed_at = $1, updated_at = NOW() WHERE id = $2`, [entryDate, existing.rows[0].id]);
+          await query(
+            `UPDATE ongoing_tasks SET completed = true, completed_at = $1, updated_at = NOW() WHERE id = $2`,
+            [entryDate, existing.rows[0].id]
+          );
         } else {
           await query(
             `INSERT INTO ongoing_tasks (id, user_id, detail, work_type, created_date, source_entry_id, completed, completed_at)
@@ -96,7 +105,6 @@ exports.syncFromEntry = async (req, res) => {
           );
         }
       } else {
-        // Not completed - create as carry-forward if it doesn't exist yet
         if (!existing.rows.length) {
           await query(
             `INSERT INTO ongoing_tasks (id, user_id, detail, work_type, created_date, source_entry_id, completed)
