@@ -28,16 +28,10 @@ export default function ProjectsPage() {
 
   const load = async () => {
     setLoading(true);
-    try {
-      const p = await projectsApi.getProjects();
-      setProjects(p.data);
-    } catch { toast.error('Failed to load projects'); }
+    try { const p = await projectsApi.getProjects(); setProjects(p.data); }
+    catch { toast.error('Failed to load projects'); }
     finally { setLoading(false); }
-    // Load users for the assign modal
-    try {
-      const u = await usersApi.getTeamMembers();
-      setUsers(u.data);
-    } catch { /* fail silently */ }
+    try { const u = await usersApi.getTeamMembers(); setUsers(u.data); } catch {}
   };
 
   useEffect(() => { load(); }, []);
@@ -86,7 +80,7 @@ export default function ProjectsPage() {
             <Card key={project.id} className="p-4 cursor-pointer hover:border-[var(--pulse-accent)]/40 transition-colors"
               onClick={() => navigate('/projects/' + project.id)}>
               <div className="flex items-start gap-3">
-                <div className={'w-2 h-2 rounded-full mt-1.5 shrink-0 ' + (HEALTH_COLOURS[project.health] || 'bg-gray-500')} title={'Health: ' + project.health} />
+                <div className={'w-2 h-2 rounded-full mt-1.5 shrink-0 ' + (HEALTH_COLOURS[project.health] || 'bg-gray-500')} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <p className="text-sm font-semibold">{project.name}</p>
@@ -122,18 +116,36 @@ export default function ProjectsPage() {
 
 export function ProjectModal({ open, onClose, project, users, onSave }) {
   const isEdit = !!project;
-  const [form, setForm] = useState({ name: '', description: '', status: 'not_started', priority: '', assignedUserIds: [], startDate: '', dueDate: '', finishedDate: '', dueDateChangeReason: '' });
+  const [form, setForm] = useState({
+    name: '', description: '', status: 'not_started', priority: '',
+    assignedUserIds: [], startDate: '', dueDate: '', finishedDate: '', dueDateChangeReason: '',
+  });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (project) {
-      setForm({ name: project.name || '', description: project.description || '', status: project.status || 'not_started', priority: project.priority || '', assignedUserIds: (project.assignments || []).map(a => a.user_id), startDate: project.start_date || '', dueDate: project.due_date || '', finishedDate: project.finished_date || '', dueDateChangeReason: '', _originalDueDate: project.due_date || '' });
+      setForm({
+        name: project.name || '',
+        description: project.description || '',
+        status: project.status || 'not_started',
+        priority: project.priority || '',
+        assignedUserIds: (project.assignments || []).map(a => a.user_id),
+        startDate: project.start_date || '',
+        dueDate: project.due_date || '',
+        finishedDate: project.finished_date || '',
+        dueDateChangeReason: '',
+        _originalDueDate: project.due_date || '',
+      });
     } else {
       setForm({ name: '', description: '', status: 'not_started', priority: '', assignedUserIds: [], startDate: '', dueDate: '', finishedDate: '', dueDateChangeReason: '' });
     }
   }, [project, open]);
 
-  const toggleUser = (id) => setForm(f => ({ ...f, assignedUserIds: f.assignedUserIds.includes(id) ? f.assignedUserIds.filter(x => x !== id) : [...f.assignedUserIds, id] }));
+  const toggleUser = (id) => setForm(f => ({
+    ...f, assignedUserIds: f.assignedUserIds.includes(id)
+      ? f.assignedUserIds.filter(x => x !== id)
+      : [...f.assignedUserIds, id],
+  }));
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error('Project name required'); return; }
@@ -142,6 +154,8 @@ export function ProjectModal({ open, onClose, project, users, onSave }) {
     catch (err) { toast.error(err.response?.data?.error || 'Failed to save'); }
     finally { setSaving(false); }
   };
+
+  const dueDateChanged = isEdit && form.dueDate !== (form._originalDueDate || '');
 
   return (
     <Modal open={open} onClose={onClose} title={isEdit ? 'Edit Project' : 'New Project'} size="md">
@@ -175,6 +189,8 @@ export function ProjectModal({ open, onClose, project, users, onSave }) {
           )}
         </div>
         <div className="grid grid-cols-3 gap-3">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium">Start Date</label>
             <input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
               className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-2 text-sm text-[var(--pulse-text)]" />
           </div>
@@ -189,7 +205,7 @@ export function ProjectModal({ open, onClose, project, users, onSave }) {
               className="bg-[var(--pulse-surface-2)] border border-[var(--pulse-border)] rounded-lg px-3 py-2 text-sm text-[var(--pulse-text)]" />
           </div>
         </div>
-        {isEdit && form.dueDate !== (form._originalDueDate || '') && (
+        {dueDateChanged && (
           <Input label="Reason for due date change" placeholder="Required when changing or removing the due date"
             value={form.dueDateChangeReason} onChange={e => setForm(f => ({ ...f, dueDateChangeReason: e.target.value }))} />
         )}
